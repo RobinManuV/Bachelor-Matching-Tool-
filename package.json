@@ -5,7 +5,15 @@
   "description": "Copia independiente del formulario y recomendador de carreras bachelor de Robin",
   "scripts": {
     "start": "node server.cjs",
-    "test": "node --test test/*.test.cjs"
+    "test": "node --test test/*.test.cjs",
+    "bootstrap:admins": "node scripts/bootstrap-admins.cjs",
+    "deploy:setup": "node scripts/deploy-setup.cjs"
   },
-  "engines": { "node": ">=20" }
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "postgres": "^3.4.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

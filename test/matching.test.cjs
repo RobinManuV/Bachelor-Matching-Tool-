@@ -7,6 +7,7 @@ const rec = require('../lib/careers-recommender');
 const { generateSuggestions } = require('../lib/career-suggestions');
 const { chatCompletion } = require('../lib/anthropic-chat');
 const { normalizeLead, saveMatchSession } = require('../lib/match-storage');
+const { schoolPassword, schoolAccessCode, validateSchoolApplication, sessionForRole } = require('../lib/admin-access');
 
 test('el catálogo y el motor copiados conservan los candidatos', () => {
   assert.equal(rec.CAREERS.length, 229);
@@ -119,4 +120,23 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
     if (previousSecret === undefined) delete process.env.SUPABASE_SECRET_KEY;
     else process.env.SUPABASE_SECRET_KEY = previousSecret;
   }
+});
+
+test('los permisos del colegio entregan solo tres recomendaciones', () => {
+  const session = { recommendations: Array.from({ length: 10 }, (_, index) => ({ program_code: `career-${index}` })) };
+  const schoolView = sessionForRole(session, { role: 'school' });
+  const robinView = sessionForRole(session, { role: 'robin' });
+  assert.equal(schoolView.recommendations.length, 3);
+  assert.equal(schoolView.locked_recommendation_count, 7);
+  assert.equal(robinView.recommendations.length, 10);
+});
+
+test('las solicitudes de colegio generan el acceso acordado', () => {
+  const application = validateSchoolApplication({
+    school_name: 'Colegio Internacional del Norte', contact_name: 'Lucía Santos',
+    job_title: 'Orientadora académica', corporate_email: 'LUCIA@COLEGIO.ES',
+  });
+  assert.equal(application.corporate_email, 'lucia@colegio.es');
+  assert.equal(schoolPassword(application.school_name), 'Robin-Colegio Internacional del Norte-2027');
+  assert.equal(schoolAccessCode(application.school_name, 'abc123'), 'colegio-internacional-del-norte-abc123');
 });

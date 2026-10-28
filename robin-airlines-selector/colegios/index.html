@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Matching para colegios · Project Robin</title>
+  <link rel="stylesheet" href="../admin/styles.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="apply-top"><a href="/"><img src="../assets/img/logo-robin.png" alt="Project Robin"></a><span>Colegios asociados</span></header>
+  <main class="apply-layout">
+    <section class="apply-intro">
+      <p class="intro-sub">Orientación universitaria internacional</p>
+      <h1>Un primer rumbo para cada alumno</h1>
+      <p>Solicita acceso al panel de colegios. Podrás consultar las respuestas de tus alumnos y sus tres recomendaciones principales desde un único manifiesto.</p>
+      <ol><li>Envía los datos del colegio.</li><li>El equipo Robin revisa la solicitud.</li><li>Recibe el acceso y el enlace para tus alumnos.</li></ol>
+    </section>
+    <section class="application-panel" id="panel">
+      <p class="panel-sub">Solicitud de acceso</p><h2>Cuéntanos quién eres</h2>
+      <form class="application-form" id="application-form">
+        <label class="field"><span>Colegio</span><input name="school_name" autocomplete="organization" required maxlength="160" placeholder="Nombre oficial del colegio"></label>
+        <label class="field"><span>Nombre y apellidos</span><input name="contact_name" autocomplete="name" required maxlength="160"></label>
+        <label class="field"><span>Puesto</span><input name="job_title" autocomplete="organization-title" required maxlength="160" placeholder="Orientación, dirección, coordinación…"></label>
+        <label class="field"><span>Correo corporativo</span><input type="email" name="corporate_email" autocomplete="email" required maxlength="320" placeholder="nombre@colegio.es"></label>
+        <label class="trap" aria-hidden="true">Sitio web<input name="website" tabindex="-1" autocomplete="off"></label>
+        <p class="privacy">Usaremos estos datos únicamente para revisar la solicitud y gestionar el acceso del colegio.</p>
+        <p class="form-error" id="form-error" hidden></p>
+        <button class="btn orange" type="submit">Enviar solicitud</button>
+      </form>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

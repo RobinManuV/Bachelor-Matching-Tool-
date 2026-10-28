@@ -28,7 +28,7 @@ exports.handler = async (event) => {
 
     const user = buildAirlinesUser(payload);
     const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback));
-    const storage = await saveMatchSession({ lead: payload.lead, user, suggestions });
+    const storage = await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code });
     return json(200, { suggestions, storage });
   } catch (error) {
     console.error('match function:', error.message);

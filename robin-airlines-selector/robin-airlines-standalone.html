@@ -850,11 +850,9 @@ const GENERAL = { key: 'general', code: 'GEN', name: 'Información general',
     { id: 'g_ingles', pose: 'three', type: 'single', q: '¿Qué nivel de inglés tienes?', options: ['A2 o inferior', 'B1', 'B2', 'C1', 'C2 / Nativo'] },
     { id: 'g_fuera', pose: 'away', type: 'single', q: '¿Has vivido o estudiado fuera de tu país?', options: ['Sí', 'No'] },
     { id: 'g_rasgos', pose: 'front', type: 'multi', q: '¿Cómo te describirías? Elige los rasgos que más te representan', options: Q_TRAITS },
-    { id: 'g_descripcion', pose: 'three', type: 'textarea', q: 'Cuéntanos algo más sobre cómo eres', optional: true },
     { id: 'g_ciudad_tipo', pose: 'bank', type: 'single', q: '¿Qué tipo de ciudad te gustaría para estudiar?', options: ['Grande', 'Mediana', 'Pequeña', 'Indiferente'] },
     { id: 'g_social', pose: 'side', type: 'single', q: '¿Qué importancia tiene para ti la vida social universitaria?', options: ['Mucha', 'Media', 'Baja'] },
     { id: 'g_independencia', pose: 'front', type: 'slider', q: '¿Qué tan independiente te consideras?', min: 0, max: 10, step: 1, def: 5, left: 'Poco', right: 'Mucho' },
-    { id: 'g_futuro', pose: 'three', type: 'textarea', q: '¿Qué idea tienes ahora mismo sobre tu futuro?' },
     { id: 'g_presupuesto', pose: 'bank', type: 'slider', q: '¿Qué presupuesto contempláis al mes para estudiar fuera?', min: 0, max: 2000, step: 50, def: 800, left: '0 €', right: '2000 €', suffix: ' €' },
     { id: 'g_algo', pose: 'front', type: 'textarea', q: '¿Hay algo importante que deberíamos saber sobre ti?', optional: true },
   ] };
@@ -967,7 +965,7 @@ function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { 
 /* ================= Estado ================= */
 function fresh() {
   return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', ciudad: '', pais: '', consent: false },
-    area: '', answers: {}, b: 0, q: -1, results: null, slide: 0, noticeShown: false };
+    area: '', answers: {}, b: 0, q: -1, results: null, slide: 0, noticeShown: false, zoomShown: false };
 }
 let S = fresh();
 let busy = false;
@@ -1287,8 +1285,6 @@ async function takeoff() {
   win.classList.add('open');
   await wait(650);
   await mvTakeoff();
-  await wait(450);
-  await robinSays(zoomLine());         // zoom a la ventanilla: Robin recuerda que es una prueba gratuita
   busy = false;
   renderStep('takeoff');
 }
@@ -1534,6 +1530,11 @@ function next() {
   if (busy) return;
   if (S.b === 1 && S.q < 0 && !S.noticeShown) { openNotice(); return; }   // el aviso de cabina no se salta
   const bl = blocks(); const blk = bl[S.b];
+  if (blk.key === 'asignaturas' && S.q < 0 && !S.zoomShown) {
+    S.zoomShown = true; busy = true;
+    robinSays(zoomLine()).then(() => { busy = false; next(); });
+    return;
+  }
   const cq = curQ(); if (cq && cq.type === 'slider' && S.answers[cq.id] === undefined) S.answers[cq.id] = cq.def;
   if (S.q < blk.qs.length - 1) S.q++;
   else if (S.b < bl.length - 1) { S.b++; S.q = -1; }
@@ -1592,6 +1593,8 @@ async function requestMatches() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       experience: 'robin-airlines',
+      lead: S.ticket,
+      school_code: new URLSearchParams(location.search).get('school') || '',
       email: S.ticket.email,
       intereses: [S.area],
       answers,

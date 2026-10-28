@@ -201,7 +201,7 @@ async function handler(req, res) {
       const user = payload.experience === 'robin-airlines' ? buildAirlinesUser(payload) : buildUser(payload);
       const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback));
       const storage = payload.experience === 'robin-airlines'
-        ? await saveMatchSession({ lead: payload.lead, user, suggestions })
+        ? await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code })
         : { saved: false, reason: 'legacy_experience' };
       return send(res, 200, { suggestions, storage });
     } catch (error) {
@@ -209,7 +209,8 @@ async function handler(req, res) {
     }
   }
   if (req.method !== 'GET') return send(res, 405, { error: 'Método no permitido' });
-  const requested = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname.slice(1));
+  let requested = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname.slice(1));
+  if (requested.endsWith('/') || !path.extname(requested)) requested = path.join(requested, 'index.html');
   const filename = path.resolve(PUBLIC, requested);
   if (filename !== PUBLIC && !filename.startsWith(PUBLIC + path.sep)) return send(res, 404, { error: 'No encontrado' });
   try {

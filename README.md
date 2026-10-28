@@ -30,7 +30,11 @@ Se puede cambiar el modelo con `ANTHROPIC_MODEL` y el puerto con `PORT`. Para ca
 - `robin-airlines-selector/`: experiencia visual, cuestionario y resultados de Robin Airlines.
 - `server.cjs`: sirve Robin Airlines y adapta sus respuestas al formato `questionnaire.blocks` y `questionnaire.signals` usado por el motor.
 - `netlify/functions/match.cjs`: versión serverless del endpoint para Netlify.
+- `netlify/functions/admin.cjs`: autenticación, alumnos, roles y aprobación de colegios.
+- `netlify/functions/school-apply.cjs`: recepción de solicitudes de colegios y aviso por correo.
 - `supabase/schema.sql`: tabla, índices y permisos de la base de datos.
+- `supabase/seed.sql`: colegio y perfiles iniciales, sin alumnos ficticios.
+- `scripts/deploy-setup.cjs`: aplica el SQL y crea en Supabase Auth los accesos iniciales durante el build.
 - `docs/NETLIFY_SUPABASE.md`: guía completa de publicación y variables de entorno.
 
 ## Flujo
@@ -40,6 +44,13 @@ Se puede cambiar el modelo con `ANTHROPIC_MODEL` y el puerto con `PORT`. Para ca
 3. El motor puntúa las carreras de las áreas elegidas y limita el catálogo a un máximo de 35 candidatas.
 4. Claude recibe el perfil y las candidatas preseleccionadas, y devuelve hasta diez carreras. Si no hay clave o falla la llamada, se usa el ranking determinista.
 5. La solicitud, el consentimiento, las respuestas y las recomendaciones se guardan en Supabase. La interfaz muestra las tres mejores con información real del catálogo y enlaces oficiales.
+
+## Panel de administración
+
+- `/admin/`: acceso para Robin y colegios aprobados.
+- `/colegios/`: formulario de solicitud para nuevos colegios.
+- Robin puede consultar todas las respuestas, las diez recomendaciones y gestionar solicitudes.
+- Cada colegio recibe un enlace propio para sus alumnos. Solo puede consultar las sesiones asociadas a ese enlace y recibe tres recomendaciones; las siete restantes no se envían al navegador.
 
 El campo de sistema y asignaturas se recoge y valida como en el portal. El recomendador actual no lo incluye en el prompt ni en la fórmula: se conserva para que el formulario sea fiel al original.
 

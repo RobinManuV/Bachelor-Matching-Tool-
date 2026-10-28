@@ -1,4 +1,5 @@
 [build]
+  command = "npm run deploy:setup"
   publish = "robin-airlines-selector"
 
 [functions]
@@ -9,5 +10,17 @@
 [[redirects]]
   from = "/api/match"
   to = "/.netlify/functions/match"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/school/apply"
+  to = "/.netlify/functions/school-apply"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/admin/*"
+  to = "/.netlify/functions/admin?route=:splat"
   status = 200
   force = true
