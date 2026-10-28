@@ -1,0 +1,13 @@
+[build]
+  publish = "robin-airlines-selector"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  included_files = ["src/questionnaire-data.mjs", "lib/careers-data.json"]
+
+[[redirects]]
+  from = "/api/match"
+  to = "/.netlify/functions/match"
+  status = 200
+  force = true

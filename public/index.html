@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bachelor Matching Tool</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="layout">
+    <header>
+      <p class="eyebrow">ROBIN · HERRAMIENTA INDEPENDIENTE</p>
+      <h1>Bachelor Matching Tool</h1>
+      <p>Completa el cuestionario original de bachelor y obtén las carreras más compatibles con tu perfil.</p>
+      <p id="status" class="status">Cargando formulario…</p>
+    </header>
+    <form id="form" novalidate hidden>
+      <section class="panel">
+        <h2>Inicio</h2>
+        <label class="question">Correo electrónico <input name="email" type="email" autocomplete="email" required></label>
+        <fieldset id="areas"><legend>Áreas de interés para tu carrera</legend><p>Puedes elegir varias. Se mostrarán las preguntas de cada área seleccionada.</p></fieldset>
+      </section>
+      <div id="questions"></div>
+      <section class="panel">
+        <h2>Sistema y asignaturas</h2>
+        <p>Selecciona tu sistema y añade al menos una asignatura actual.</p>
+        <label class="question">Sistema académico <select id="academic-system" required><option value="">Selecciona un sistema</option></select></label>
+        <div id="subjects"></div>
+        <button type="button" id="add-subject" class="secondary">Añadir asignatura</button>
+      </section>
+      <div class="actions"><button type="submit" id="submit">Obtener recomendación</button></div>
+    </form>
+    <section id="results" class="panel" hidden></section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

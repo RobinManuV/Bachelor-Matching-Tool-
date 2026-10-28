@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robin Airlines · Selector de carreras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="cloud-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f7fbff"/><stop offset="1" stop-color="#d3e3f4"/></linearGradient>
+    <linearGradient id="wing-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f7fb"/><stop offset="1" stop-color="#c5d0dd"/></linearGradient>
+    <linearGradient id="winglet-g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2e4c8a"/><stop offset="1" stop-color="#213765"/></linearGradient>
+    <symbol id="cloud" viewBox="0 0 160 70"><g fill="url(#cloud-g)"><circle cx="40" cy="46" r="20"/><circle cx="70" cy="32" r="28"/><circle cx="104" cy="38" r="23"/><circle cx="130" cy="50" r="15"/><rect x="20" y="46" width="126" height="22" rx="11"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand"><img src="assets/img/logo-robin.png" alt="Robin" width="39" height="21"><span>AIRLINES</span></div>
+      <div class="flightno">RB 2027<span class="leg" id="leg"></span></div>
+    </div>
+  </header>
+
+  <div class="route" id="route" hidden>
+    <div class="wrap">
+      <div class="track" id="track" role="img" aria-label="Progreso del vuelo">
+        <div class="track-line"></div>
+        <div class="track-fill" id="track-fill"></div>
+        <div id="track-nodes"></div>
+        <img class="plane" id="track-plane" src="assets/img/avioneta-mini.webp" alt="">
+      </div>
+    </div>
+  </div>
+
+  <main id="main">
+    <!-- 1 · CHECK-IN (sección 1 del formulario: tus datos) -->
+    <section class="screen" id="s-checkin" aria-labelledby="checkin-title">
+      <div class="wrap checkin">
+        <div class="pass-col">
+          <article class="pass" id="pass" aria-label="Tu tarjeta de embarque">
+            <div class="pass-head">
+              <div class="airline"><img src="assets/img/robin-avatar.webp" alt="">Robin Airlines</div>
+              <div class="kind">TARJETA DE<br>EMBARQUE</div>
+            </div>
+            <div class="pass-route">
+              <div><div class="code empty" id="p-orig">···</div><div class="city" id="p-orig-city">Tu ciudad</div></div>
+              <div class="path"><svg viewBox="0 0 24 24" aria-hidden="true"><path transform="rotate(90 12 12)" fill="currentColor" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+              <div class="to"><div class="code">UNI</div><div class="city">La universidad</div></div>
+            </div>
+            <dl class="pass-grid">
+              <div class="pf s4"><dt>Pasajero</dt><dd class="big empty" id="p-name">APELLIDOS / NOMBRE</dd></div>
+              <div class="pf"><dt>Vuelo</dt><dd>RB 2027</dd></div>
+              <div class="pf"><dt>Fecha</dt><dd id="p-date">—</dd></div>
+              <div class="pf"><dt>Embarque</dt><dd id="p-time">—</dd></div>
+              <div class="pf"><dt>Asiento</dt><dd id="p-seat">—</dd></div>
+              <div class="pf s4"><dt>Colegio</dt><dd class="empty" id="p-school">—</dd></div>
+              <div class="pf s4"><dt>Contacto</dt><dd class="small empty" id="p-contact">correo · teléfono</dd></div>
+            </dl>
+            <div class="perf" aria-hidden="true"></div>
+            <div class="pass-stub">
+              <span id="p-barcode" class="barcode" aria-hidden="true"></span>
+              <div class="stub-meta">TARIFA <b>PRUEBA GRATUITA</b><br>PUERTA <b>R</b> · VENTANILLA</div>
+            </div>
+            <div class="stamp" id="stamp" aria-hidden="true">Embarcado</div>
+          </article>
+          <p class="pass-caption">Tu billete se rellena mientras escribes.</p>
+        </div>
+
+        <div>
+          <p class="eyebrow">Prueba gratuita · Orientación para bachelor</p>
+          <h1 class="h1" id="checkin-title">Tu vuelo a la universidad sale ahora</h1>
+          <p class="lede">Haz el check-in, elige rumbo y contesta a Robin durante el vuelo. Aterrizas con tus tres carreras más compatibles. Son unos 7 minutos.</p>
+
+          <form class="form" id="ticket-form" novalidate>
+            <p class="form-title">Tus datos</p>
+            <div class="row2">
+              <div class="field" data-f="nombre">
+                <label for="t-nombre">Nombre</label>
+                <input type="text" id="t-nombre" name="nombre" autocomplete="given-name" maxlength="60" placeholder="Lucía">
+                <p class="err">Escribe tu nombre.</p>
+              </div>
+              <div class="field" data-f="apellidos">
+                <label for="t-apellidos">Apellidos</label>
+                <input type="text" id="t-apellidos" name="apellidos" autocomplete="family-name" maxlength="80" placeholder="Martín Gómez">
+                <p class="err">Escribe tus apellidos.</p>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field" data-f="email">
+                <label for="t-email">Correo electrónico</label>
+                <input type="email" id="t-email" name="email" autocomplete="email" maxlength="160" placeholder="tu@correo.com">
+                <p class="err">Escribe un correo válido, por ejemplo nombre@gmail.com.</p>
+              </div>
+              <div class="field" data-f="telefono">
+                <label for="t-telefono">Teléfono móvil</label>
+                <input type="tel" id="t-telefono" name="telefono" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="+34 600 000 000">
+                <p class="err">Escribe un teléfono con al menos 9 cifras.</p>
+              </div>
+            </div>
+            <div class="field" data-f="colegio">
+              <label for="t-colegio">Colegio o centro educativo actual</label>
+              <input type="text" id="t-colegio" name="colegio" autocomplete="organization" maxlength="120" placeholder="Nombre del colegio">
+              <p class="err">Escribe el nombre de tu colegio o centro.</p>
+            </div>
+            <div class="row2">
+              <div class="field" data-f="ciudad">
+                <label for="t-ciudad">Ciudad de origen</label>
+                <input type="text" id="t-ciudad" name="ciudad" autocomplete="address-level2" maxlength="80" placeholder="Madrid">
+                <p class="err">Escribe tu ciudad.</p>
+              </div>
+              <div class="field" data-f="pais">
+                <label for="t-pais">País de origen</label>
+                <input type="text" id="t-pais" name="pais" autocomplete="country-name" maxlength="60" placeholder="España">
+                <p class="err">Escribe tu país.</p>
+              </div>
+            </div>
+            <div class="field" data-f="consent">
+              <label class="consent" for="t-consent">
+                <input type="checkbox" id="t-consent" name="consent">
+                <span>Acepto que Project Robin trate mis datos para enviarme los resultados y contactarme sobre ellos. <a href="https://projectrobin.study/politica-de-privacidad/" target="_blank" rel="noopener">Política de privacidad</a></span>
+              </label>
+              <p class="err">Necesitamos tu permiso para enviarte los resultados.</p>
+            </div>
+            <div class="submit-row">
+              <button class="btn" type="submit" id="board-btn">Embarcar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+              <span class="small-note">Puedes volver atrás en cualquier pregunta.</span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · RUTA (pregunta 14) -->
+    <section class="screen" id="s-ruta" hidden aria-labelledby="ruta-title">
+      <div class="wrap ruta">
+        <div>
+          <p class="eyebrow">Antes de despegar</p>
+          <h2 class="h2" id="ruta-title">Elige tu ruta</h2>
+          <div class="say">
+            <div class="avatar"><img src="assets/img/robin-avatar.webp" alt=""></div>
+            <p class="line">¿Hacia dónde ponemos rumbo? Elige el área que más te interesa. Solo una: cada área tiene su propia escala.</p>
+          </div>
+          <div class="areas" id="areas" role="group" aria-label="¿Qué área te interesa más?"></div>
+        </div>
+        <aside class="itin" aria-labelledby="itin-title">
+          <h3 id="itin-title">Tu ruta</h3>
+          <ol class="stops" id="stops"></ol>
+          <div class="itin-sum" id="itin-sum"></div>
+          <button class="btn wide" type="button" id="takeoff-btn" disabled>Despegar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="btn quiet" type="button" id="ruta-back">Volver al billete</button>
+        </aside>
+      </div>
+      <div class="ruta-bar">
+        <span class="rb-sum" id="rb-sum">Elige un área</span>
+        <button class="btn" type="button" id="takeoff-btn-m" disabled>Despegar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- 3 · VUELO -->
+    <section class="screen" id="s-vuelo" hidden aria-label="Vuelo">
+      <div class="wrap flight">
+        <div class="cabin">
+          <div class="window" id="window">
+            <div class="layer far" aria-hidden="true">
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:62s;--delay:-8s;top:5%;width:30%;--o:.6"><use href="#cloud"/></svg>
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:54s;--delay:-30s;top:20%;width:22%;--o:.5"><use href="#cloud"/></svg>
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:70s;--delay:-47s;top:34%;width:34%;--o:.55"><use href="#cloud"/></svg>
+            </div>
+            <div class="ground" aria-hidden="true">
+              <div class="g-far"></div>
+              <div class="g-trees"></div>
+              <div class="g-runway"><div class="g-edge"></div><div class="g-dash"></div></div>
+              <div class="g-near"></div>
+              <div class="g-haze"></div>
+            </div>
+            <div class="layer mid" aria-hidden="true">
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:31s;--delay:-6s;top:50%;width:48%;--o:.92"><use href="#cloud"/></svg>
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:36s;--delay:-22s;top:64%;width:58%;--o:.85"><use href="#cloud"/></svg>
+            </div>
+            <div class="robin-fly" id="robin-fly" role="img" aria-label="Robin vuela a tu lado en su avioneta">
+              <div class="robin-drift"><div class="robin-bob">
+                <img class="pose" data-pose="front" src="assets/img/avioneta-frente.webp" alt="">
+                <img class="pose" data-pose="side" src="assets/img/avioneta-perfil.webp" alt="">
+                <img class="pose" data-pose="three" src="assets/img/avioneta-tres-cuartos.webp" alt="">
+                <img class="pose" data-pose="bank" src="assets/img/avioneta-alabeo.webp" alt="">
+                <img class="pose" data-pose="away" src="assets/img/avioneta-de-espaldas.webp" alt="">
+              </div></div>
+              <div class="puffs" aria-hidden="true"><i style="--k:0"></i><i style="--k:1"></i><i style="--k:2"></i></div>
+            </div>
+            <div class="layer near" aria-hidden="true">
+              <svg class="cloud" viewBox="0 0 160 70" style="--d:22s;--delay:-13s;top:74%;width:92%;--o:.9"><use href="#cloud"/></svg>
+            </div>
+            <div class="wing" aria-hidden="true">
+              <svg viewBox="0 0 400 112" preserveAspectRatio="xMinYMax meet">
+                <path d="M-10 112 L-10 78 L268 40 L292 39 L430 112 Z" fill="url(#wing-g)"/>
+                <path d="M-10 78 L268 40" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+                <path d="M40 112 L270 47" stroke="#b3bfcd" stroke-width="1.4"/>
+                <path d="M180 112 L281 52" stroke="#b3bfcd" stroke-width="1.2"/>
+                <path d="M268 40 L276 6 L290 4 L292 39 Z" fill="url(#winglet-g)"/>
+                <path d="M279 11 L287 10 L286 17 L278 18 Z" fill="#feb546"/>
+              </svg>
+            </div>
+            <div class="streaks" aria-hidden="true">
+              <i style="top:16%;width:30%;animation-delay:0s"></i><i style="top:32%;width:44%;animation-delay:.08s"></i><i style="top:48%;width:26%;animation-delay:.03s"></i><i style="top:62%;width:38%;animation-delay:.12s"></i><i style="top:78%;width:22%;animation-delay:.05s"></i>
+            </div>
+            <div class="glass" aria-hidden="true"></div>
+            <div class="blind" aria-hidden="true"></div>
+          </div>
+          <div class="placard">
+            <img src="assets/img/logo-r-crema.webp" alt="Project Robin">
+            <div class="pl-txt"><b>Robin Airlines</b><span>The world is your campus</span></div>
+            <div class="pl-seat"><span>Asiento</span><b id="cabin-seat">—</b></div>
+          </div>
+        </div>
+        <div class="qpane" id="qpane">
+          <div class="bubble" id="bubble" aria-live="polite">
+            <div class="qhead"><span class="av" aria-hidden="true"><img src="assets/img/robin-avatar.webp" alt=""></span><div><div class="who">Robin <small>tu asesor</small></div><div class="qmeta" id="qmeta-txt"></div></div></div>
+            <h2 class="qtext" id="qtext"></h2>
+            <p class="qhint" id="qhint"></p>
+          </div>
+          <div class="answers" id="answers"></div>
+          <p class="err-inline" id="q-err" hidden></p>
+          <div class="actions" id="actions">
+            <button class="btn quiet" type="button" id="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Atrás</button>
+            <div class="right">
+              <button class="btn ghost" type="button" id="skip-btn" hidden>Saltar</button>
+              <button class="btn" type="button" id="next-btn">Continuar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · DESTINO -->
+    <section class="screen" id="s-destino" hidden aria-labelledby="dest-title">
+      <div class="wrap dest">
+        <div class="dest-head">
+          <p class="eyebrow">Destino final · UNI · La universidad</p>
+          <h1 class="h1" id="dest-title">Has aterrizado</h1>
+          <p class="lede">Estos son tus tres destinos. Desliza para ver cada uno.</p>
+        </div>
+        <div class="carousel">
+          <div class="slides" id="slides" aria-roledescription="carrusel" aria-label="Tus tres destinos"></div>
+          <div class="cnav">
+            <button class="iconbtn" type="button" id="prev-slide" aria-label="Destino anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <div class="dots" id="dots"></div>
+            <button class="iconbtn" type="button" id="next-slide" aria-label="Destino siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+        </div>
+        <p class="disclaimer">Esta prueba ofrece una orientación inicial. Las condiciones de admisión de cada programa deben comprobarse por separado.</p>
+        <section class="upsell" aria-labelledby="upsell-title">
+          <img src="assets/img/logo-r-crema.webp" alt="">
+          <div><h2 id="upsell-title">Esto ha sido el vuelo de prueba</h2><p>En el asesoramiento completo, Robin elige contigo los estudios, gestiona tus candidaturas y te ayuda a encontrar alojamiento. La primera consulta es gratis.</p></div>
+          <a class="btn amber" href="https://projectrobin.study/servicios/asesoramiento-completo/" target="_blank" rel="noopener">Ver asesoramiento completo</a>
+        </section>
+        <div class="dest-foot">
+          <button class="btn ghost" type="button" id="replay-btn">Repetir el vuelo</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<!-- Zoom a la ventanilla: Robin te habla de cerca tras elegir área -->
+<div class="zoom" id="zoom" hidden>
+  <div class="z-clouds" aria-hidden="true">
+    <svg class="cloud" viewBox="0 0 160 70" style="--d:46s;--delay:-10s;top:8%;width:26%;--o:.7"><use href="#cloud"/></svg>
+    <svg class="cloud" viewBox="0 0 160 70" style="--d:38s;--delay:-26s;top:66%;width:34%;--o:.85"><use href="#cloud"/></svg>
+    <svg class="cloud" viewBox="0 0 160 70" style="--d:54s;--delay:-40s;top:38%;width:20%;--o:.55"><use href="#cloud"/></svg>
+  </div>
+  <div class="z-robin" id="z-robin" aria-hidden="true"><div class="z-bob"><img src="assets/img/avioneta-frente.webp" alt=""></div></div>
+  <div class="z-bubble" id="z-bubble" role="status">
+    <div class="z-who"><span class="av"><img src="assets/img/robin-avatar.webp" alt=""></span><span>Robin <small>tu asesor</small></span></div>
+    <p id="z-text" aria-hidden="true"></p>
+    <p class="sr" id="z-sr"></p>
+  </div>
+</div>
+
+<!-- Aviso de cabina: recuerda que esto es la versión reducida del asesoramiento de Robin -->
+<div class="notice" id="notice" hidden>
+  <div class="notice-backdrop" data-close></div>
+  <div class="notice-card" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-desc">
+    <div class="notice-top">
+      <span class="sign" id="notice-sign" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8.5" width="14" height="7" rx="2.2"/><rect x="9.5" y="10.5" width="5" height="3" rx="1"/><path d="M1.5 12h3.5M19 12h3.5"/></svg></span>
+      <span class="notice-kind">Aviso de cabina</span>
+      <button class="notice-x" type="button" data-close aria-label="Cerrar aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="notice-body">
+      <div class="notice-who"><span class="av"><img src="assets/img/robin-avatar.webp" alt=""></span>Te habla Robin, desde la ventanilla</div>
+      <h2 class="notice-title" id="notice-title">Estás en un vuelo de prueba</h2>
+      <p id="notice-desc">Esta es la versión reducida de la orientación de Robin: <b><span class="nq">14</span> preguntas</b> para darte una primera idea de por dónde tirar. El asesoramiento completo va mucho más allá.</p>
+      <div class="fares">
+        <div class="fare lite"><span class="fare-k">Tu billete de hoy</span><b>Vuelo de prueba</b><ul><li><span class="nq">14</span> preguntas</li><li>3 destinos orientativos</li><li>Resultado al momento</li></ul></div>
+        <div class="fare full"><span class="fare-k">Asesoramiento completo</span><b>De principio a fin</b><ul><li>Selección de estudios según tus intereses</li><li>Gestión de todo el proceso de aplicación</li><li>Ayuda para encontrar alojamiento</li></ul></div>
+      </div>
+      <span class="notice-free">La primera consulta es gratis</span>
+      <div class="notice-actions">
+        <button class="btn" type="button" id="notice-ok" data-close>Seguir con mi vuelo</button>
+        <a class="btn ghost" href="https://projectrobin.study/servicios/asesoramiento-completo/" target="_blank" rel="noopener">Ver el asesoramiento completo</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
