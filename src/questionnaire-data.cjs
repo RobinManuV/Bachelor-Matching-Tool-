@@ -45,7 +45,6 @@ const Q_GENERAL = {
   key: "general",
   title: "Bloque 1 · Información general",
   questions: [
-    { id: "g_ciudad", type: "text", q: "Ciudad y país donde resides actualmente" },
     { id: "g_colegio", type: "text", q: "Nombre de tu colegio actual" },
     { id: "g_sistema", type: "single", q: "¿Qué sistema educativo estás cursando?", options: ["Bachillerato español", "Bachillerato Internacional (IB)", "A-Levels (británico)", "Sistema americano", "Bac francés", "Otro"] },
     { id: "g_nota", type: "slider", q: "¿Cuál es tu nota media del año pasado?", min: 0, max: 10, step: 0.5, def: 7, left: "0", right: "10" },
@@ -202,4 +201,4 @@ const Q_MASTER_OBJETIVO = {
 
 const Q_MASTER_BLOCKS = [Q_MASTER_FORMACION, Q_MASTER_EXPERIENCIA, Q_MASTER_OBJETIVO];
 
-export { Q_AREAS, Q_GENERAL, Q_MASTER_BLOCKS, Q_VOCACIONAL };
+module.exports = { Q_AREAS, Q_GENERAL, Q_MASTER_BLOCKS, Q_VOCACIONAL };

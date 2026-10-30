@@ -28,7 +28,15 @@ async function existingUsers(supabase) {
 
 async function ensureUser(supabase, users, { email, password, metadata }) {
   const current = users.find((user) => user.email?.toLowerCase() === email);
-  if (current) return current;
+  if (current) {
+    const { data, error } = await supabase.auth.admin.updateUserById(current.id, {
+      password,
+      email_confirm: true,
+      user_metadata: metadata,
+    });
+    if (error || !data.user) throw error || new Error(`No se pudo actualizar ${email}`);
+    return data.user;
+  }
   const { data, error } = await supabase.auth.admin.createUser({
     email,
     password,

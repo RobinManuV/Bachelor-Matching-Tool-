@@ -1,7 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
-const { pathToFileURL } = require('node:url');
 const { loadData, buildUser, buildAirlinesUser } = require('../server.cjs');
 const rec = require('../lib/careers-recommender');
 const { generateSuggestions } = require('../lib/career-suggestions');
@@ -17,7 +15,7 @@ test('el catálogo y el motor copiados conservan los candidatos', () => {
 });
 
 test('el proyecto genera una recomendación determinista completa sin clave', async () => {
-  const source = await import(pathToFileURL(path.join(__dirname, '../src/questionnaire-data.mjs')).href);
+  const source = require('../src/questionnaire-data.cjs');
   const answers = {};
   for (const block of [source.Q_GENERAL, source.Q_AREAS.ingenierias, source.Q_VOCACIONAL]) {
     for (const question of block.questions) {
@@ -42,7 +40,7 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
     email: 'vuelo@example.com',
     intereses: ['ingenierias'],
     answers: {
-      g_ciudad: 'Madrid, España', g_colegio: 'Colegio de prueba', g_sistema: 'Bachillerato español',
+      g_colegio: 'Colegio de prueba', g_sistema: 'Bachillerato español',
       modalidad: 'Ciencias – tecnológico', g_nota: 8, g_fav: ['matematicas', 'fisica'],
       g_menos: ['historia'], g_estilo: 3, g_valora: ['innovacion'], g_rasgos: ['analitico', 'curioso'],
       v_trabajo10: 'Quiero diseñar sistemas aeroespaciales.', v_prioridad: 'Pasión', v_paises: ['Países Bajos'],
@@ -55,6 +53,7 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
   assert.deepEqual(user.questionnaire.signals.asignaturas_fav, ['matematicas', 'fisica']);
   const questions = user.questionnaire.blocks.flatMap((block) => block.items.map((item) => item.q));
   assert.ok(questions.includes('¿Qué modalidad de bachillerato cursas?'));
+  assert.ok(!questions.includes('Ciudad y país donde resides actualmente'));
   assert.ok(!questions.includes('¿Te atrae más la investigación o la industria?'));
 });
 

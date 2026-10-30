@@ -52,7 +52,6 @@ const Q_VALORA = [
 const GENERAL = { key: 'general', code: 'GEN', name: 'Información general',
   line: (n, nombre) => `${nombre ? nombre + ', primera' : 'Primera'} escala: lo básico sobre ti. Son ${n} preguntas y muchas se contestan con un toque.`,
   questions: [
-    { id: 'g_ciudad', pose: 'bank', type: 'text', q: 'Ciudad y país donde resides actualmente', ph: 'Madrid, España' },
     { id: 'g_sistema', pose: 'side', type: 'single', q: '¿Qué sistema educativo estás cursando?', options: ['Bachillerato español', 'Bachillerato Internacional (IB)', 'A-Levels (británico)', 'Sistema americano', 'Bac francés', 'Otro'] },
     { id: 'modalidad', pose: 'three', type: 'single', q: '¿Qué modalidad de bachillerato cursas?', options: ['Ciencias – tecnológico', 'Ciencias – biosanitario', 'Humanidades y Ciencias Sociales', 'Artes', 'General'], when: (a) => a.g_sistema === 'Bachillerato español' },
     { id: 'g_nota', pose: 'away', type: 'slider', q: '¿Cuál es tu nota media del año pasado?', min: 0, max: 10, step: 0.5, def: 7, left: '0', right: '10', hint: 'Desliza para responder. Si tu sistema usa otra escala, pásala a nota sobre 10.' },

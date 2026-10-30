@@ -1,7 +1,6 @@
 const http = require('node:http');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
 const { generateSuggestions } = require('./lib/career-suggestions');
 const { findCareer, CAREERS } = require('./lib/careers-recommender');
 const { saveMatchSession } = require('./lib/match-storage');
@@ -229,7 +228,7 @@ async function handler(req, res) {
 }
 
 async function loadData() {
-  const data = await import(pathToFileURL(path.join(ROOT, 'src/questionnaire-data.mjs')).href);
+  const data = require('./src/questionnaire-data.cjs');
   questionnaireData = { Q_GENERAL: data.Q_GENERAL, Q_AREAS: data.Q_AREAS, Q_VOCACIONAL: data.Q_VOCACIONAL };
 }
 

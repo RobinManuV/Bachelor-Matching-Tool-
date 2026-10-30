@@ -21,7 +21,7 @@ Se puede cambiar el modelo con `ANTHROPIC_MODEL` y el puerto con `PORT`. Para ca
 
 ## Qué contiene
 
-- `src/questionnaire-data.mjs`: copia íntegra de las definiciones de preguntas del portal, renombrada de `.js` a `.mjs` para que Node pueda cargarla sin compilador. La aplicación usa la ruta bachelor: información general, áreas elegidas y perfil vocacional. El archivo copiado también conserva los bloques de máster de la fuente original.
+- `src/questionnaire-data.cjs`: copia íntegra de las definiciones de preguntas del portal en un módulo CommonJS que Netlify puede empaquetar de forma estática. La aplicación usa la ruta bachelor: información general, áreas elegidas y perfil vocacional. El archivo copiado también conserva los bloques de máster de la fuente original.
 - `src/academic-systems.cjs`: copia íntegra de los sistemas y niveles académicos del portal.
 - `lib/careers-data.json`: copia íntegra del catálogo de 229 carreras y sus variables.
 - `lib/careers-recommender.js`: copia íntegra de la puntuación determinista y la preparación de candidatos.
