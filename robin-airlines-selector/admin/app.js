@@ -82,7 +82,7 @@ function previewData(role) {
 async function rawApi(route, options = {}) {
   const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
   if (state.session?.access_token) headers.authorization = `Bearer ${state.session.access_token}`;
-  const response = await fetch(`/api/admin/${route}`, { method: options.method || 'GET', headers, body: options.body ? JSON.stringify(options.body) : undefined });
+  const response = await fetch(`/.netlify/functions/admin?route=${encodeURIComponent(route)}`, { method: options.method || 'GET', headers, body: options.body ? JSON.stringify(options.body) : undefined });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { const error = new Error(data.error || 'No se pudo completar la operación'); error.status = response.status; throw error; }
   return data;
