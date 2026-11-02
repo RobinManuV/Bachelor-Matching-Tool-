@@ -3,7 +3,12 @@
 
 const STORAGE_KEY = 'robin_language';
 const SUPPORTED = new Set(['es', 'en', 'pt-PT']);
-const requested = localStorage.getItem(STORAGE_KEY) || 'es';
+const params = new URLSearchParams(location.search);
+const isEmbed = params.get('embed') === '1';
+const urlLocale = params.get('lang');
+const requested = isEmbed
+  ? (SUPPORTED.has(urlLocale) ? urlLocale : 'es')
+  : localStorage.getItem(STORAGE_KEY) || 'es';
 let locale = SUPPORTED.has(requested) ? requested : requested.toLowerCase().startsWith('pt') ? 'pt-PT' : requested.toLowerCase().startsWith('en') ? 'en' : 'es';
 
 const rows = [
@@ -615,7 +620,7 @@ function mount(root = document) {
 }
 
 function setLocale(next) {
-  if (!SUPPORTED.has(next) || next === locale) return;
+  if (isEmbed || !SUPPORTED.has(next) || next === locale) return;
   locale = next;
   localStorage.setItem(STORAGE_KEY, locale);
   document.querySelectorAll('.robin-language select').forEach((select) => { select.value = locale; });

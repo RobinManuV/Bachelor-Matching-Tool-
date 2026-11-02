@@ -1,6 +1,26 @@
 (() => {
 'use strict';
 
+const urlParams = new URLSearchParams(location.search);
+const isFramed = window.parent !== window;
+const isEmbed = urlParams.get('embed') === '1';
+if (isFramed) document.documentElement.classList.add('is-iframe');
+if (isEmbed) document.documentElement.classList.add('is-embed');
+
+function postHeight() {
+  if (isFramed) parent.postMessage({ type: 'rbmt:height', height: document.documentElement.scrollHeight }, 'https://project-robin.com');
+}
+function postScrollTop() {
+  if (!isFramed) return;
+  parent.postMessage({ type: 'rbmt:scrollTop' }, 'https://project-robin.com');
+  requestAnimationFrame(postHeight);
+  setTimeout(postHeight, 650);
+}
+if (isFramed) {
+  new ResizeObserver(postHeight).observe(document.body);
+  window.addEventListener('load', postHeight);
+}
+
 /* ================= Recursos ================= */
 const CITY_IMG = {
   amsterdam:'assets/img/ciudades/amsterdam.webp', rotterdam:'assets/img/ciudades/rotterdam.webp', delft:'assets/img/ciudades/delft.webp',
@@ -203,6 +223,7 @@ function show(phase) {
   const el = $('#s-' + phase);
   el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
   window.scrollTo(0, 0);
+  postScrollTop();
 }
 
 /* ================= Check-in ================= */
@@ -459,7 +480,8 @@ async function robinSays(text) {
   zt.innerHTML = text.split(' ').map((w) => `<span class="w">${esc(w)}</span>`).join(' ');
   $('#z-sr').textContent = '';
   z.hidden = false; zb.style.opacity = '0';
-  document.documentElement.style.overflow = 'hidden';
+  if (!isEmbed) document.documentElement.style.overflow = 'hidden';
+  postScrollTop();
   const full = 'inset(0px 0px 0px 0px round 0px / 0px)';
   const from = () => {   // dónde está Robin (vista de frente) dentro de la ventanilla pequeña
     const img = $('.pose[data-pose="front"]', fly); const fr = img.getBoundingClientRect();
@@ -467,7 +489,7 @@ async function robinSays(text) {
     const sc = (fr.width * .95) / end.width;
     return `translate(calc(-50% + ${fr.left + fr.width / 2 - (end.left + end.width / 2)}px), calc(-50% + ${fr.top + fr.height / 2 - (end.top + end.height / 2)}px)) scale(${sc})`;
   };
-  if (!reduceMotion) {
+  if (!reduceMotion && !isEmbed) {
     const c = windowClip().clip;
     z.animate([{ clipPath: c, opacity: 0 }, { clipPath: c, opacity: 1, offset: .12 }, { clipPath: full, opacity: 1 }], { duration: 1050, easing: 'cubic-bezier(.65,0,.25,1)' });
     zr.animate([{ transform: from() }, { transform: from(), offset: .12 }, { transform: 'translate(-50%,-50%)' }], { duration: 1050, easing: 'cubic-bezier(.65,0,.25,1)' });
@@ -482,7 +504,7 @@ async function robinSays(text) {
     await wait(85 + w.textContent.length * 9 + (/[.?!:]$/.test(w.textContent) ? 260 : /,$/.test(w.textContent) ? 120 : 0));
   }
   await wait(2300);                               // tiempo para terminar de leer
-  if (!reduceMotion) {
+  if (!reduceMotion && !isEmbed) {
     zb.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.85)' }], { duration: 260, easing: 'ease-in', fill: 'forwards' });
     await wait(240);
     const c = windowClip().clip;
@@ -492,7 +514,7 @@ async function robinSays(text) {
   }
   [z, zr, zb].forEach((el) => el.getAnimations().forEach((an) => an.cancel()));
   z.hidden = true; zb.style.opacity = '0';
-  document.documentElement.style.overflow = '';
+  if (!isEmbed) document.documentElement.style.overflow = '';
 }
 
 /* ================= Vuelo ================= */
@@ -597,6 +619,7 @@ function renderStep(dir) {
     RENDER[q.type](box, q);
   });
   if (window.scrollY > 120) window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  if (dir !== 'none') postScrollTop();
 }
 function renderIntro(blk, bl) {
   const n = blk.qs.length;
@@ -834,6 +857,7 @@ $('#back-btn').addEventListener('click', back);
 /* ---- Aterrizaje ---- */
 async function land() {
   busy = true;
+  postScrollTop();
   renderRoute(true);
   setBubble('Descenso', 'Iniciando el descenso. Estoy cruzando tus respuestas con el catálogo de carreras.', '');
   setActions({ none: true });
@@ -931,8 +955,8 @@ function renderDestino() {
             </div>
           </div>
           <div class="ccta">
-            ${r.website_url ? `<a class="btn" href="${esc(r.website_url)}" target="_blank" rel="noopener">Información oficial</a>` : ''}
-            <a class="btn ghost" href="https://projectrobin.study/servicios/asesoramiento-completo/" target="_blank" rel="noopener">Ver asesoramiento</a>
+            ${r.website_url ? `<a class="btn" href="${esc(r.website_url)}" target="_top" rel="noopener">Información oficial</a>` : ''}
+            <a class="btn ghost" href="https://project-robin.com/servicios/asesoramiento-completo/" target="_top" rel="noopener">Ver asesoramiento</a>
           </div>
         </div>
       </article>
@@ -1013,14 +1037,15 @@ function openNotice() {
   $$('.nq', noticeEl).forEach((e) => { e.textContent = totalQuestions(); });
   noticeReturn = document.activeElement;
   noticeEl.hidden = false;
-  document.documentElement.style.overflow = 'hidden';
+  if (!isEmbed) document.documentElement.style.overflow = 'hidden';
+  postScrollTop();
   const sign = $('#notice-sign'); sign.classList.remove('ding'); void sign.offsetWidth; sign.classList.add('ding');
   setTimeout(() => $('#notice-ok').focus(), 60);
   document.addEventListener('keydown', noticeKeys);
 }
 function closeNotice() {
   noticeEl.hidden = true;
-  document.documentElement.style.overflow = '';
+  if (!isEmbed) document.documentElement.style.overflow = '';
   document.removeEventListener('keydown', noticeKeys);
   const back = noticeReturn && document.contains(noticeReturn) && !noticeReturn.closest('[hidden]') ? noticeReturn : $('#next-btn');
   if (back) back.focus({ preventScroll: true });
