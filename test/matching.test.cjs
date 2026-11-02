@@ -39,6 +39,7 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
   await loadData();
   const user = buildAirlinesUser({
     email: 'vuelo@example.com',
+    locale: 'pt-PT',
     intereses: ['ingenierias'],
     answers: {
       g_colegio: 'Colegio de prueba', g_sistema: 'Bachillerato español',
@@ -50,12 +51,15 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
     academic_subjects: [{ name: 'Matemáticas', level: '' }, { name: 'Física', level: '' }],
   });
   assert.equal(user.academic_system, 'bachillerato_espanol');
+  assert.equal(user.locale, 'pt-PT');
+  assert.equal(user.questionnaire.locale, 'pt-PT');
   assert.deepEqual(user.questionnaire.signals.areas, ['ingenierias']);
   assert.deepEqual(user.questionnaire.signals.asignaturas_fav, ['matematicas', 'fisica']);
   const questions = user.questionnaire.blocks.flatMap((block) => block.items.map((item) => item.q));
   assert.ok(questions.includes('¿Qué modalidad de bachillerato cursas?'));
   assert.ok(!questions.includes('Ciudad y país donde resides actualmente'));
   assert.ok(!questions.includes('¿Te atrae más la investigación o la industria?'));
+  assert.match(rec.fallbackRanking(rec.getCandidates(['ingenierias'], {}, 1), 'en')[0].reason, /matches your area of interest/);
 });
 
 test('el conector independiente conserva la petición a Claude', async () => {

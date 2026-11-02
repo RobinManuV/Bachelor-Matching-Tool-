@@ -166,6 +166,8 @@ const IATA = { madrid: 'MAD', barcelona: 'BCN', valencia: 'VLC', sevilla: 'SVQ',
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const uiLocale = () => window.RobinI18n?.getLocale() || 'es';
+const tr = (value) => window.RobinI18n?.t(value) || value;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const norm = (o) => (typeof o === 'string' ? { label: o, value: o } : o);
@@ -208,7 +210,7 @@ const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'ciudad', '
 const F = {}; KEYS.forEach((k) => { F[k] = $('#t-' + k); }); F.consent = $('#t-consent');
 const now = new Date();
 const boardTime = new Date(now.getTime() + 15 * 60000);
-$('#p-date').textContent = now.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
+$('#p-date').textContent = now.toLocaleDateString(uiLocale(), { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
 $('#p-time').textContent = boardTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
 function barcode(str) {
@@ -271,20 +273,20 @@ $('#ticket-form').addEventListener('submit', async (e) => {
 function renderRuta() {
   $('#areas').innerHTML = AREAS.map((a) => `<button type="button" class="area" data-k="${a.key}" aria-pressed="${S.area === a.key}"><span class="acode">${esc(a.code)}</span><span class="aname">${esc(a.name)}</span><span class="aex">${esc(a.ex)}</span></button>`).join('');
   const bl = blocks(); const oc = originCode() || 'ORG'; const area = areaBy(S.area);
-  const count = (b) => (b.key === 'asignaturas' ? '1 pantalla' : `${b.qs.length}${b.key === 'general' && !S.answers.g_sistema ? '–18' : ''} preg.`);
+  const count = (b) => (b.key === 'asignaturas' ? tr('1 pantalla') : `${b.qs.length}${b.key === 'general' && !S.answers.g_sistema ? '–18' : ''} ${tr('preg.')}`);
   const rows = [
-    `<li><span class="sc">${esc(oc)}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(S.ticket.ciudad || 'Tu ciudad')}</span><span class="sq">Origen</span></li>`,
+    `<li><span class="sc">${esc(oc)}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(S.ticket.ciudad || tr('Tu ciudad'))}</span><span class="sq">${tr('Origen')}</span></li>`,
     ...bl.map((b) => `<li class="${AREA_BLOCKS[b.key] ? 'esc' : ''}"><span class="sc">${b.code}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(b.name)}</span><span class="sq">${count(b)}</span></li>`),
-    `<li class="end"><span class="sc">UNI</span><span class="dot" aria-hidden="true"></span><span class="sn">La universidad${area ? `<small>Rumbo: ${esc(area.name)}</small>` : ''}</span><span class="sq">Destino</span></li>`,
+    `<li class="end"><span class="sc">UNI</span><span class="dot" aria-hidden="true"></span><span class="sn">${tr('La universidad')}${area ? `<small>${tr('Rumbo:')} ${esc(tr(area.name))}</small>` : ''}</span><span class="sq">${tr('Destino')}</span></li>`,
   ];
   $('#stops').innerHTML = rows.join('');
   const total = totalQuestions();
   $('#itin-sum').innerHTML = area
-    ? `<span><b>${bl.length}</b> escalas</span><span><b>${total}</b> preguntas</span><span>unos <b>${Math.max(1, Math.round(total * 15 / 60))}</b> min</span>`
-    : `<span>Elige un área para fijar el rumbo.</span>`;
+    ? `<span><b>${bl.length}</b> ${tr('escalas')}</span><span><b>${total}</b> ${tr('preguntas')}</span><span>${tr('unos')} <b>${Math.max(1, Math.round(total * 15 / 60))}</b> min</span>`
+    : `<span>${tr('Elige un área para fijar el rumbo.')}</span>`;
   $('#takeoff-btn').disabled = !area;
   $('#takeoff-btn-m').disabled = !area;
-  $('#rb-sum').innerHTML = area ? `Rumbo: <b>${esc(area.name)}</b>` : 'Elige un área';
+  $('#rb-sum').innerHTML = area ? `${tr('Rumbo:')} <b>${esc(tr(area.name))}</b>` : tr('Elige un área');
 }
 $('#areas').addEventListener('click', (e) => {
   const btn = e.target.closest('.area'); if (!btn) return;
@@ -423,7 +425,12 @@ async function mvLand() {
   place({ x: -2, y: yWheels('side', .63, RUNWAY), s: .63, r: 0 });
   await wait(220); if (id !== chore) return;
   touchdown();
-  setBubble('En tierra', `¡Tocamos tierra${S.ticket.nombre ? ', ' + S.ticket.nombre : ''}! Ya tengo tus tres destinos.`, '');
+  const landed = uiLocale() === 'en'
+    ? `Touchdown${S.ticket.nombre ? `, ${S.ticket.nombre}` : ''}! I have your three destinations.`
+    : uiLocale() === 'pt-PT'
+      ? `Aterrámos${S.ticket.nombre ? `, ${S.ticket.nombre}` : ''}! Já tenho os teus três destinos.`
+      : `¡Tocamos tierra${S.ticket.nombre ? ', ' + S.ticket.nombre : ''}! Ya tengo tus tres destinos.`;
+  setBubble(tr('En tierra'), landed, '');
   timing(1700, 'cubic-bezier(.15,.6,.25,1)');    // frenada por la pista
   place({ x: -13, y: yWheels('side', .63, RUNWAY), s: .63, r: 0 });
   await wait(1600); if (id !== chore) return;
@@ -435,7 +442,10 @@ async function mvLand() {
 /* ================= Zoom a la ventanilla: Robin te habla de cerca ================= */
 const zoomLine = () => {
   const a = areaBy(S.area);
-  return `¿Te tira algo más que ${a ? a.name : 'esta área'}? Buena señal. Hoy volamos con un solo rumbo porque es un vuelo de prueba gratuito. En el asesoramiento de Project Robin exploramos contigo todo lo que te interesa y damos con el destino que de verdad encaja contigo.`;
+  const area = tr(a ? a.name : 'esta área');
+  if (uiLocale() === 'en') return `Are you also drawn to something beyond ${area}? That is a good sign. Today we are flying in one direction because this is a free trial flight. With Project Robin guidance, we explore everything that interests you and find the destination that truly fits you.`;
+  if (uiLocale() === 'pt-PT') return `Há algo para além de ${area} que também te atrai? É um bom sinal. Hoje voamos num só rumo porque este é um voo de teste gratuito. No acompanhamento do Project Robin, exploramos contigo tudo o que te interessa e encontramos o destino que realmente combina contigo.`;
+  return `¿Te tira algo más que ${area}? Buena señal. Hoy volamos con un solo rumbo porque es un vuelo de prueba gratuito. En el asesoramiento de Project Robin exploramos contigo todo lo que te interesa y damos con el destino que de verdad encaja contigo.`;
 };
 function windowClip() {
   const r = win.getBoundingClientRect(); const b = win.clientLeft;
@@ -491,7 +501,12 @@ async function takeoff() {
   win.classList.remove('open'); resetCabin();
   setPose('front', { x: 26, y: -34, s: .14 }, true);
   renderRoute();
-  setBubble('Embarque completado', `Despegamos${S.ticket.nombre ? ', ' + S.ticket.nombre : ''}. Te voy preguntando desde aquí fuera: en unas preguntas eliges una opción y en otras puedes marcar varias.`, '');
+  const takeoffLine = uiLocale() === 'en'
+    ? `We are taking off${S.ticket.nombre ? `, ${S.ticket.nombre}` : ''}. I will ask you questions from out here: for some you choose one option, and for others you can select several.`
+    : uiLocale() === 'pt-PT'
+      ? `Vamos descolar${S.ticket.nombre ? `, ${S.ticket.nombre}` : ''}. Vou fazer-te perguntas a partir daqui: em algumas escolhes uma opção e noutras podes selecionar várias.`
+      : `Despegamos${S.ticket.nombre ? ', ' + S.ticket.nombre : ''}. Te voy preguntando desde aquí fuera: en unas preguntas eliges una opción y en otras puedes marcar varias.`;
+  setBubble(tr('Embarque completado'), takeoffLine, '');
   $('#answers').replaceChildren(); setActions({ none: true });
   await wait(450);
   win.classList.add('open');
@@ -515,7 +530,12 @@ function renderRoute(final) {
   }).join('');
   $('#track-fill').style.width = `${p * 100}%`;
   $('#track-plane').style.left = `${p * 100}%`;
-  $('#track').setAttribute('aria-label', final ? 'Llegando al destino' : `Rumbo a ${cur.name}, escala ${S.b + 1} de ${bl.length}`);
+  const routeLabel = uiLocale() === 'en'
+    ? `Heading to ${tr(cur.name)}, stop ${S.b + 1} of ${bl.length}`
+    : uiLocale() === 'pt-PT'
+      ? `Rumo a ${tr(cur.name)}, escala ${S.b + 1} de ${bl.length}`
+      : `Rumbo a ${cur.name}, escala ${S.b + 1} de ${bl.length}`;
+  $('#track').setAttribute('aria-label', final ? tr('Llegando al destino') : routeLabel);
 }
 function setBubble(meta, text, hint) {
   $('#qmeta-txt').textContent = meta;
@@ -566,7 +586,12 @@ function renderStep(dir) {
     const q = blk.qs[S.q];
     const typeHint = { single: 'Elige una opción.', multi: q.max ? `Elige hasta ${q.max}.` : 'Puedes elegir varias.', slider: 'Desliza para responder.', textarea: 'Con un par de frases basta.', text: '', subjects: '' }[q.type];
     const hint = q.hint || [q.optional ? 'Opcional.' : '', typeHint].filter(Boolean).join(' ');
-    setBubble(`${blk.code} · Pregunta ${S.q + 1} de ${blk.qs.length}`, q.q, hint);
+    const progress = uiLocale() === 'en'
+      ? `Question ${S.q + 1} of ${blk.qs.length}`
+      : uiLocale() === 'pt-PT'
+        ? `Pergunta ${S.q + 1} de ${blk.qs.length}`
+        : `Pregunta ${S.q + 1} de ${blk.qs.length}`;
+    setBubble(`${blk.code} · ${progress}`, q.q, hint);
     const box = document.createElement('div');   // contenedor nuevo: los listeners no se acumulan
     $('#answers').replaceChildren(box);
     RENDER[q.type](box, q);
@@ -575,7 +600,7 @@ function renderStep(dir) {
 }
 function renderIntro(blk, bl) {
   const n = blk.qs.length;
-  setBubble(`Escala ${S.b + 1} de ${bl.length}`, blk.line(n, S.ticket.nombre), '');
+  setBubble(`Escala ${S.b + 1} de ${bl.length}`, localizedBlockLine(blk, n), '');
   $('#answers').innerHTML = `<div class="board" role="group" aria-label="Próxima escala">
       <div class="lbl">Robin Airlines · Próxima escala</div>
       <div class="flap" aria-hidden="true">${blk.code.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</div>
@@ -583,6 +608,35 @@ function renderIntro(blk, bl) {
       <div class="bmeta"><span><b>${n}</b> preguntas</span><span>unos <b>${Math.max(1, Math.round(n * 15 / 60))}</b> min</span></div>
     </div>`;
   setActions({ label: S.b === 0 ? 'Empezar' : 'Seguir volando' });
+}
+
+function localizedBlockLine(blk, count) {
+  const name = S.ticket.nombre;
+  if (uiLocale() === 'en') {
+    if (blk.key === 'general') return `${name ? `${name}, first` : 'First'} stop: the basics about you. There are ${count} questions and many take just one tap.`;
+    if (blk.key === 'vocacional') return `Penultimate stop. ${count} questions about how you picture your future.`;
+    if (blk.key === 'asignaturas') return 'Last stop before landing: the subjects you are taking this year.';
+    const endings = {
+      ciencias: 'to see which branch appeals to you most', tecnologia_y_programacion: 'about what you like to build',
+      business: 'about how you see yourself working', ciencias_de_la_salud: 'about the work you picture yourself doing',
+      ingenierias: 'about the problems you enjoy solving', ciencias_sociales: 'about the issues that move you',
+      artes: 'about the way you create',
+    };
+    return `${tr(blk.name)} stop. ${count} questions ${endings[blk.key] || ''}.`;
+  }
+  if (uiLocale() === 'pt-PT') {
+    if (blk.key === 'general') return `${name ? `${name}, primeira` : 'Primeira'} escala: o essencial sobre ti. São ${count} perguntas e muitas respondem-se com um toque.`;
+    if (blk.key === 'vocacional') return `Penúltima escala. ${count} perguntas sobre como imaginas o teu futuro.`;
+    if (blk.key === 'asignaturas') return 'Última escala antes de aterrar: as disciplinas que frequentas este ano.';
+    const endings = {
+      ciencias: 'para perceber que área mais te atrai', tecnologia_y_programacion: 'sobre aquilo que gostas de construir',
+      business: 'sobre como te imaginas a trabalhar', ciencias_de_la_salud: 'sobre o trabalho que imaginas ter',
+      ingenierias: 'sobre os problemas que gostas de resolver', ciencias_sociales: 'sobre os temas que te mobilizam',
+      artes: 'sobre a tua forma de criar',
+    };
+    return `Escala em ${tr(blk.name)}. ${count} perguntas ${endings[blk.key] || ''}.`;
+  }
+  return blk.line(count, name);
 }
 
 /* ---- Tipos de pregunta ---- */
@@ -648,9 +702,10 @@ const RENDER = {
 function renderSlider(box, q) {
   const v0 = S.answers[q.id] ?? q.def;
   const id = 'r-' + q.id;
+  const month = uiLocale() === 'en' ? '/month' : uiLocale() === 'pt-PT' ? '/mês' : '/mes';
   const fmt = (v) => (q.suffix
-    ? `${Number(v).toLocaleString('es-ES')}<small>€/mes</small>`
-    : `${Number(v).toLocaleString('es-ES', { minimumFractionDigits: q.step < 1 ? 1 : 0, maximumFractionDigits: 1 })}<small>/ ${q.max}</small>`);
+    ? `${Number(v).toLocaleString(uiLocale())}<small>€${month}</small>`
+    : `${Number(v).toLocaleString(uiLocale(), { minimumFractionDigits: q.step < 1 ? 1 : 0, maximumFractionDigits: 1 })}<small>/ ${q.max}</small>`);
   box.innerHTML = `<div class="slider">
       <div class="sval" id="${id}-v" aria-hidden="true">${fmt(v0)}</div>
       <label class="sr" for="${id}">${esc(q.q)}</label>
@@ -658,7 +713,13 @@ function renderSlider(box, q) {
       <div class="ends"><span>${esc(q.left)}</span><span>${esc(q.right)}</span></div>
     </div>`;
   const r = $('#' + id, box);
-  const paint = () => { r.style.setProperty('--p', `${((r.value - q.min) / (q.max - q.min)) * 100}%`); $('#' + id + '-v', box).innerHTML = fmt(r.value); r.setAttribute('aria-valuetext', q.suffix ? `${r.value} euros al mes` : `${r.value} de ${q.max}`); };
+  const paint = () => {
+    r.style.setProperty('--p', `${((r.value - q.min) / (q.max - q.min)) * 100}%`); $('#' + id + '-v', box).innerHTML = fmt(r.value);
+    const valueText = q.suffix
+      ? uiLocale() === 'en' ? `${r.value} euros per month` : uiLocale() === 'pt-PT' ? `${r.value} euros por mês` : `${r.value} euros al mes`
+      : uiLocale() === 'en' ? `${r.value} out of ${q.max}` : uiLocale() === 'pt-PT' ? `${r.value} de ${q.max}` : `${r.value} de ${q.max}`;
+    r.setAttribute('aria-valuetext', valueText);
+  };
   paint();
   r.addEventListener('input', () => { S.answers[q.id] = Number(r.value); paint(); });
   setActions({ label: nextLabel() });
@@ -699,7 +760,11 @@ function renderSubjects(box, q) {
   const list = S.answers.asignaturas;
   const lv = sys.levels;
   $('#qhint').hidden = false;
-  $('#qhint').textContent = `${sys.label}. Toca las que cursas o añade otras${lv.length ? ' e indica el nivel de cada una' : ''}.`;
+  $('#qhint').textContent = uiLocale() === 'en'
+    ? `${tr(sys.label)}. Select the subjects you take or add others${lv.length ? ' and indicate each level' : ''}.`
+    : uiLocale() === 'pt-PT'
+      ? `${tr(sys.label)}. Seleciona as disciplinas que frequentas ou adiciona outras${lv.length ? ' e indica o nível de cada uma' : ''}.`
+      : `${sys.label}. Toca las que cursas o añade otras${lv.length ? ' e indica el nivel de cada una' : ''}.`;
   const draw = () => {
     const names = new Set(list.map((x) => x.name));
     box.innerHTML = `
@@ -806,6 +871,7 @@ async function requestMatches() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       experience: 'robin-airlines',
+      locale: uiLocale(),
       lead: S.ticket,
       school_code: new URLSearchParams(location.search).get('school') || '',
       email: S.ticket.email,
@@ -830,8 +896,8 @@ function renderDestino() {
     const genericImage = image === CITY_IMG.default;
     const strengths = String(r.strengths || '').split(',').map((value) => value.trim()).filter(Boolean);
     const numerusFixus = r.numerus_fixus
-      ? `Numerus fixus${r.numerus_fixus_seats ? `: ${r.numerus_fixus_seats} plazas` : ''}`
-      : 'Sin numerus fixus indicado';
+      ? `Numerus fixus${r.numerus_fixus_seats ? `: ${r.numerus_fixus_seats} ${uiLocale() === 'en' ? 'places' : uiLocale() === 'pt-PT' ? 'vagas' : 'plazas'}` : ''}`
+      : tr('Sin numerus fixus indicado');
     return `<div class="slide" role="group" aria-roledescription="destino" aria-label="Destino ${i + 1} de ${res.length}: ${esc(r.career_name)}">
       <article class="card">
         <div class="photo${genericImage ? ' generic' : ''}">
@@ -843,7 +909,7 @@ function renderDestino() {
           <div>
             <h2 class="career">${esc(r.career_name)}</h2>
             <p class="uni">${esc(r.university)}</p>
-            <p class="desc">${esc(areaBy(S.area)?.name || r.area)}${r.subarea ? `, especialidad en ${esc(r.subarea)}` : ''}.</p>
+            <p class="desc">${esc(tr(areaBy(S.area)?.name || r.area))}${r.subarea ? `, ${tr('especialidad en')} ${esc(r.subarea)}` : ''}.</p>
             <div class="facts"><span class="fact">${esc(r.duration_years)} años</span><span class="fact">${esc(r.degree_type)}</span><span class="fact">Programa en inglés</span><span class="fact">${esc(numerusFixus)}</span></div>
             <div class="notes">
               <div><h4>Por qué encaja</h4><ul><li>${esc(r.reason || 'Coincide con tu perfil general.')}</li></ul></div>
@@ -975,4 +1041,10 @@ function boot() {
   show('checkin');
 }
 boot();
+window.addEventListener('robin:languagechange', () => {
+  renderPass();
+  if (S.phase === 'ruta') renderRuta();
+  else if (S.phase === 'vuelo') renderStep('none');
+  else if (S.phase === 'destino') renderDestino();
+});
 })();

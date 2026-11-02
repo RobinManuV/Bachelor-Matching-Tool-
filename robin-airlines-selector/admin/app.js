@@ -58,8 +58,9 @@ const mockApplications = [
 let state = { profile: null, sessions: [], applications: [], selected: null, view: 'students', query: '', session: null };
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const tr = (value) => window.RobinI18n?.t(value) || value;
 const initials = (first, last = '') => `${String(first || '').charAt(0)}${String(last || '').charAt(0)}`.toUpperCase();
-const formatDate = (value) => new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+const formatDate = (value) => new Intl.DateTimeFormat(window.RobinI18n?.getLocale() || 'es', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 const schoolOf = (profile) => Array.isArray(profile?.schools) ? profile.schools[0] : profile?.schools;
 
 function showToast(message) {
@@ -100,7 +101,7 @@ async function api(route, options) {
 function renderLogin(error = '') {
   app.innerHTML = `<main class="login-page">
     <section class="login-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"><div><h1>Matching de carreras</h1><p>Respuestas, perfiles y destinos académicos en un único manifiesto.</p></div></section>
-    <section class="login-panel"><h2>Acceso al panel</h2><p>Administración Robin y colegios asociados.</p>
+    <section class="login-panel"><div class="login-language" data-language-switcher></div><h2>Acceso al panel</h2><p>Administración Robin y colegios asociados.</p>
       <form class="form" id="login-form">
         <label class="field"><span>Correo</span><input type="email" name="email" autocomplete="username" required></label>
         <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
@@ -135,7 +136,7 @@ function renderShell() {
       <div class="sidebar-foot">Matching de carreras<br><button id="logout" type="button">Cerrar sesión</button></div>
     </aside>
     <header class="topbar"><span class="topbar-title">Panel de matching</span>
-      <div class="topbar-user"><span>${esc(state.profile.email)}</span><span class="role-chip">${robin ? 'Robin' : 'Colegio'}</span>
+      <div class="topbar-user"><div data-language-switcher></div><span>${esc(state.profile.email)}</span><span class="role-chip">${robin ? 'Robin' : 'Colegio'}</span>
       ${previewRole ? `<div class="preview-switch" aria-label="Cambiar vista de preview"><button data-preview="robin" aria-pressed="${robin}">Robin</button><button data-preview="school" aria-pressed="${!robin}">Colegio</button></div>` : ''}</div>
     </header><main class="main" id="main"></main></div>`;
   document.querySelector('.nav').addEventListener('click', (event) => { const button = event.target.closest('[data-view]'); if (!button) return; state.view = button.dataset.view; renderView(); });
@@ -171,8 +172,8 @@ function renderStudents() {
 }
 
 function valueHtml(value) {
-  if (Array.isArray(value)) return value.map(esc).join(', ');
-  return esc(value);
+  if (Array.isArray(value)) return value.map((item) => esc(tr(item))).join(', ');
+  return esc(tr(value));
 }
 
 function dossierHtml(session) {
@@ -180,17 +181,17 @@ function dossierHtml(session) {
   const feedback = new Map((session.recommendation_feedback || []).map((item) => [item.program_code, item.decision]));
   const locked = Number(session.locked_recommendation_count || 0);
   return `<div class="dossier-top"><div><h2>${esc(session.first_name)} ${esc(session.last_name)}</h2><p>${esc(session.email)} · ${esc(session.phone)}</p></div><span class="score-stamp">${esc(areaNames[session.selected_area] || session.selected_area)}</span></div>
-    <div class="facts"><div class="fact"><span>Origen</span><strong>${esc(session.origin_city)}, ${esc(session.origin_country)}</strong></div><div class="fact"><span>Colegio</span><strong>${esc(session.school)}</strong></div><div class="fact"><span>Sistema</span><strong>${esc(session.academic_system)}</strong></div><div class="fact"><span>Fecha</span><strong>${esc(formatDate(session.created_at))}</strong></div></div>
+    <div class="facts"><div class="fact"><span>Origen</span><strong>${esc(session.origin_city)}, ${esc(tr(session.origin_country))}</strong></div><div class="fact"><span>Colegio</span><strong>${esc(session.school)}</strong></div><div class="fact"><span>Sistema</span><strong>${esc(tr(session.academic_system))}</strong></div><div class="fact"><span>Fecha</span><strong>${esc(formatDate(session.created_at))}</strong></div></div>
     <div class="dossier-body"><section class="answers"><div class="section-title"><h3>Respuestas</h3><span>${blocks.reduce((count, block) => count + (block.items?.length || 0), 0)} registradas</span></div>
       ${blocks.map((block) => `<div class="answer-block"><h4>${esc(block.title)}</h4><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl></div>`).join('')}
-      <div class="answer-block"><h4>Asignaturas</h4><dl><div class="qa"><dd>${(session.academic_subjects || []).map((subject) => esc(subject.name)).join(', ') || 'Sin asignaturas registradas'}</dd></div></dl></div></section>
+      <div class="answer-block"><h4>Asignaturas</h4><dl><div class="qa"><dd>${(session.academic_subjects || []).map((subject) => esc(tr(subject.name))).join(', ') || 'Sin asignaturas registradas'}</dd></div></dl></div></section>
     <section class="recommendations"><div class="section-title"><h3>Recomendaciones</h3><span>${recommendations.length + locked} destinos</span></div><div class="rec-list">
       ${recommendations.map((item, index) => recHtml(item, index + 1, feedback.get(item.program_code))).join('')}${Array.from({ length: locked }, (_, index) => lockedRecHtml(recommendations.length + index + 1)).join('')}
     </div></section></div>`;
 }
 
 function recHtml(item, rank, decision) {
-  const answer = decision ? `<small class="student-feedback ${esc(decision)}">El alumno indicó: ${decision === 'approved' ? 'Sí' : 'No'}</small>` : '';
+  const answer = decision ? `<small class="student-feedback ${esc(decision)}">${tr('El alumno indicó:')} ${tr(decision === 'approved' ? 'Sí' : 'No')}</small>` : '';
   return `<div class="rec"><span class="rec-rank">${rank}</span><span><strong>${esc(item.career_name)}</strong><small>${esc(item.university)} · ${esc(item.city)}</small>${answer}</span><span class="compat">${esc(item.compatibility)}%</span></div>`;
 }
 
@@ -230,4 +231,7 @@ async function boot() {
 }
 
 boot();
+window.addEventListener('robin:languagechange', () => {
+  if (state.profile) renderShell(); else renderLogin();
+});
 })();

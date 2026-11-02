@@ -115,6 +115,7 @@ function buildAirlinesUser(payload) {
   const email = String(payload.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Introduce un correo válido');
   const intereses = payload.intereses;
+  const locale = ['es', 'en', 'pt-PT'].includes(payload.locale) ? payload.locale : 'es';
   if (!Array.isArray(intereses) || intereses.length !== 1 || !AREA_LABELS[intereses[0]]) {
     throw new Error('Selecciona un área de interés válida');
   }
@@ -163,6 +164,7 @@ function buildAirlinesUser(payload) {
     intereses,
     questionnaire: {
       version: 1,
+      locale,
       blocks,
       signals: {
         nota_media: answers.g_nota,
@@ -181,6 +183,7 @@ function buildAirlinesUser(payload) {
     },
     academic_system: academic.system,
     academic_subjects: academic.subjects,
+    locale,
   };
 }
 
