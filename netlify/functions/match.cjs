@@ -1,6 +1,7 @@
 const { loadData, buildAirlinesUser, validateFeedback } = require('../../server.cjs');
 const { generateSuggestions } = require('../../lib/career-suggestions');
 const { saveMatchSession } = require('../../lib/match-storage');
+const { loadFeedbackHistory } = require('../../lib/recommendation-feedback');
 
 let dataPromise;
 function ensureData() {
@@ -27,7 +28,8 @@ exports.handler = async (event) => {
     if (payload.experience !== 'robin-airlines') throw new Error('Experiencia no válida');
 
     const user = buildAirlinesUser(payload);
-    const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback));
+    const history = await loadFeedbackHistory(user.intereses[0]);
+    const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback), history);
     const storage = await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code });
     return json(200, { suggestions, storage });
   } catch (error) {

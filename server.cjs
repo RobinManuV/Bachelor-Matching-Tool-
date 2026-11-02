@@ -4,6 +4,7 @@ const path = require('node:path');
 const { generateSuggestions } = require('./lib/career-suggestions');
 const { findCareer, CAREERS } = require('./lib/careers-recommender');
 const { saveMatchSession } = require('./lib/match-storage');
+const { saveRecommendationFeedback, loadFeedbackHistory } = require('./lib/recommendation-feedback');
 const { ACADEMIC_SYSTEMS, sanitizeAcademicProfile } = require('./src/academic-systems.cjs');
 
 const ROOT = __dirname;
@@ -198,11 +199,19 @@ async function handler(req, res) {
     try {
       const payload = await readBody(req);
       const user = payload.experience === 'robin-airlines' ? buildAirlinesUser(payload) : buildUser(payload);
-      const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback));
+      const history = payload.experience === 'robin-airlines' ? await loadFeedbackHistory(user.intereses[0]) : [];
+      const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback), history);
       const storage = payload.experience === 'robin-airlines'
         ? await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code })
         : { saved: false, reason: 'legacy_experience' };
       return send(res, 200, { suggestions, storage });
+    } catch (error) {
+      return send(res, 400, { error: error.message });
+    }
+  }
+  if (req.method === 'POST' && url.pathname === '/api/feedback') {
+    try {
+      return send(res, 200, await saveRecommendationFeedback(await readBody(req)));
     } catch (error) {
       return send(res, 400, { error: error.message });
     }

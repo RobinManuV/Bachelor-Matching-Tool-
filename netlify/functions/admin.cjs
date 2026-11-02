@@ -42,7 +42,7 @@ async function refresh(body) {
 }
 
 async function listSessions(profile) {
-  let query = getAdminClient().from('matching_sessions').select('*').order('created_at', { ascending: false }).limit(500);
+  let query = getAdminClient().from('matching_sessions').select('*,recommendation_feedback(program_code,decision,created_at)').order('created_at', { ascending: false }).limit(500);
   if (profile.role === 'school') {
     if (!profile.school_id) return [];
     query = query.eq('school_id', profile.school_id);

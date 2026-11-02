@@ -177,7 +177,7 @@ function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { 
 /* ================= Estado ================= */
 function fresh() {
   return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', ciudad: '', pais: '', consent: false },
-    area: '', answers: {}, b: 0, q: -1, results: null, slide: 0, noticeShown: false, zoomShown: false };
+    area: '', answers: {}, b: 0, q: -1, results: null, sessionId: '', feedback: {}, slide: 0, noticeShown: false, zoomShown: false };
 }
 let S = fresh();
 let busy = false;
@@ -781,7 +781,8 @@ async function land() {
   try {
     const outcome = await resultPromise;
     if (outcome.error) throw outcome.error;
-    S.results = outcome.results;
+    S.results = outcome.results.items;
+    S.sessionId = outcome.results.sessionId;
     items[2].classList.add('on');
     await wait(500);
     S.slide = 0;
@@ -817,7 +818,7 @@ async function requestMatches() {
   if (!response.ok) throw new Error(data.error || 'El recomendador no está disponible en este momento.');
   const items = data.suggestions?.items;
   if (!Array.isArray(items) || items.length < 3) throw new Error('No se han podido obtener tres recomendaciones válidas.');
-  return items.slice(0, 3);
+  return { items: items.slice(0, 3), sessionId: data.storage?.id || '' };
 }
 
 function renderDestino() {
@@ -854,6 +855,14 @@ function renderDestino() {
               <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rt" cx="60" cy="60" r="52" fill="none" stroke-width="11"/><circle class="rv" cx="60" cy="60" r="52" fill="none" stroke-width="11" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-off="${(C * (1 - r.compatibility / 100)).toFixed(1)}"/></svg>
               <div class="rlabel"><span class="pct">${r.compatibility}%</span><span class="pl">Compatibilidad</span></div>
             </div>
+            <div class="match-feedback" data-feedback="${esc(r.program_code)}">
+              <p>¿Esta opción va contigo?</p>
+              <div class="feedback-actions" role="group" aria-label="Valora esta recomendación">
+                <button type="button" data-feedback-decision="approved" aria-pressed="${S.feedback[r.program_code] === 'approved'}">Sí</button>
+                <button type="button" data-feedback-decision="rejected" aria-pressed="${S.feedback[r.program_code] === 'rejected'}">No</button>
+              </div>
+              <span class="feedback-status" role="status">${S.feedback[r.program_code] ? 'Gracias, tendremos en cuenta tu respuesta.' : ''}</span>
+            </div>
           </div>
           <div class="ccta">
             ${r.website_url ? `<a class="btn" href="${esc(r.website_url)}" target="_blank" rel="noopener">Información oficial</a>` : ''}
@@ -868,6 +877,36 @@ function renderDestino() {
   requestAnimationFrame(() => requestAnimationFrame(() => fillSlide(0)));
 }
 const slidesEl = $('#slides');
+slidesEl.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-feedback-decision]');
+  if (!button) return;
+  const feedback = button.closest('[data-feedback]');
+  const status = $('.feedback-status', feedback);
+  const buttons = $$('button', feedback);
+  if (!S.sessionId) { status.textContent = 'No se ha podido guardar la valoración de esta sesión.'; return; }
+  buttons.forEach((item) => { item.disabled = true; });
+  status.textContent = 'Guardando…';
+  try {
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: S.sessionId,
+        program_code: feedback.dataset.feedback,
+        decision: button.dataset.feedbackDecision,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'No se ha podido guardar la valoración.');
+    S.feedback[feedback.dataset.feedback] = button.dataset.feedbackDecision;
+    buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+    status.textContent = 'Gracias, tendremos en cuenta tu respuesta.';
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    buttons.forEach((item) => { item.disabled = false; });
+  }
+});
 function fillSlide(i) {
   const s = slidesEl.children[i]; if (!s) return;
   $$('.bt i', s).forEach((el) => { el.style.width = el.dataset.w + '%'; });

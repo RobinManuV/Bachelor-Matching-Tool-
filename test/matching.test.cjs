@@ -2,10 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadData, buildUser, buildAirlinesUser } = require('../server.cjs');
 const rec = require('../lib/careers-recommender');
-const { generateSuggestions } = require('../lib/career-suggestions');
+const { generateSuggestions, buildHistoricalAdjustments, formatHistoricalFeedback } = require('../lib/career-suggestions');
 const { chatCompletion } = require('../lib/anthropic-chat');
 const { normalizeLead, saveMatchSession } = require('../lib/match-storage');
 const { schoolPassword, schoolAccessCode, validateSchoolApplication, sessionForRole } = require('../lib/admin-access');
+const { normalizeFeedback, saveRecommendationFeedback } = require('../lib/recommendation-feedback');
 
 test('el catálogo y el motor copiados conservan los candidatos', () => {
   assert.equal(rec.CAREERS.length, 229);
@@ -92,7 +93,7 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
   process.env.SUPABASE_SECRET_KEY = 'sb_secret_prueba';
   global.fetch = async (url, options) => {
     request = { url, options };
-    return { ok: true, status: 201 };
+    return { ok: true, status: 201, json: async () => [{ id: '11111111-1111-4111-8111-111111111111' }] };
   };
 
   try {
@@ -107,8 +108,8 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
       },
       suggestions: { source: 'fallback', model: null, items: [{ program_code: 'TEST' }] },
     });
-    assert.deepEqual(result, { saved: true });
-    assert.equal(request.url, 'https://proyecto.supabase.co/rest/v1/matching_sessions');
+    assert.deepEqual(result, { saved: true, id: '11111111-1111-4111-8111-111111111111' });
+    assert.equal(request.url, 'https://proyecto.supabase.co/rest/v1/matching_sessions?select=id');
     assert.equal(request.options.headers.apikey, 'sb_secret_prueba');
     assert.equal(request.options.headers.authorization, undefined);
     assert.equal(JSON.parse(request.options.body).email, 'ana@example.com');
@@ -118,6 +119,64 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
     else process.env.SUPABASE_URL = previousUrl;
     if (previousSecret === undefined) delete process.env.SUPABASE_SECRET_KEY;
     else process.env.SUPABASE_SECRET_KEY = previousSecret;
+  }
+});
+
+test('las valoraciones se validan y generan una señal histórica por perfil', () => {
+  const feedback = normalizeFeedback({
+    session_id: '11111111-1111-4111-8111-111111111111',
+    program_code: 'tud-aerospace-engineering',
+    decision: 'approved',
+  });
+  assert.equal(feedback.decision, 'approved');
+  assert.throws(() => normalizeFeedback({
+    session_id: feedback.matching_session_id,
+    program_code: feedback.program_code,
+    decision: 'maybe',
+  }), /valoración/);
+
+  const signals = { asignaturas_fav: ['matematicas', 'fisica'], rasgos: ['analitico'], prioridad: 'Pasión' };
+  const history = [
+    { program_code: 'tud-aerospace-engineering', decision: 'approved', signals },
+    { program_code: 'tud-computer-science-and-engineering', decision: 'rejected', signals },
+  ];
+  const adjustments = buildHistoricalAdjustments(signals, history);
+  assert.ok(adjustments.get('tud-aerospace-engineering') > 0);
+  assert.ok(adjustments.get('tud-computer-science-and-engineering') < 0);
+  assert.match(formatHistoricalFeedback(history), /SI: tud-aerospace-engineering/);
+});
+
+test('la valoración del alumno se guarda una sola vez por sesión y carrera', async () => {
+  const previousUrl = process.env.SUPABASE_URL;
+  const previousSecret = process.env.SUPABASE_SECRET_KEY;
+  const previousFetch = global.fetch;
+  const requests = [];
+  process.env.SUPABASE_URL = 'https://proyecto.supabase.co';
+  process.env.SUPABASE_SECRET_KEY = 'sb_secret_prueba';
+  global.fetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (requests.length === 1) return {
+      ok: true,
+      json: async () => [{
+        id: '11111111-1111-4111-8111-111111111111',
+        recommendations: [{ program_code: 'tud-aerospace-engineering' }],
+      }],
+    };
+    return { ok: true };
+  };
+  try {
+    const result = await saveRecommendationFeedback({
+      session_id: '11111111-1111-4111-8111-111111111111',
+      program_code: 'tud-aerospace-engineering',
+      decision: 'approved',
+    });
+    assert.equal(result.saved, true);
+    assert.match(requests[1].url, /on_conflict=matching_session_id,program_code/);
+    assert.equal(requests[1].options.headers.prefer, 'resolution=merge-duplicates,return=minimal');
+  } finally {
+    global.fetch = previousFetch;
+    if (previousUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = previousUrl;
+    if (previousSecret === undefined) delete process.env.SUPABASE_SECRET_KEY; else process.env.SUPABASE_SECRET_KEY = previousSecret;
   }
 });
 

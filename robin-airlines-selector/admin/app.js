@@ -44,6 +44,10 @@ const mockSession = {
     ] },
   ] },
   recommendation_source: 'fallback', recommendation_model: null, recommendations: mockRecommendations, locked_recommendation_count: 0,
+  recommendation_feedback: [
+    { program_code: 'tud-aerospace-engineering', decision: 'approved' },
+    { program_code: 'tud-computer-science-and-engineering', decision: 'rejected' },
+  ],
 };
 
 const mockApplications = [
@@ -173,6 +177,7 @@ function valueHtml(value) {
 
 function dossierHtml(session) {
   const blocks = session.questionnaire?.blocks || []; const recommendations = session.recommendations || [];
+  const feedback = new Map((session.recommendation_feedback || []).map((item) => [item.program_code, item.decision]));
   const locked = Number(session.locked_recommendation_count || 0);
   return `<div class="dossier-top"><div><h2>${esc(session.first_name)} ${esc(session.last_name)}</h2><p>${esc(session.email)} · ${esc(session.phone)}</p></div><span class="score-stamp">${esc(areaNames[session.selected_area] || session.selected_area)}</span></div>
     <div class="facts"><div class="fact"><span>Origen</span><strong>${esc(session.origin_city)}, ${esc(session.origin_country)}</strong></div><div class="fact"><span>Colegio</span><strong>${esc(session.school)}</strong></div><div class="fact"><span>Sistema</span><strong>${esc(session.academic_system)}</strong></div><div class="fact"><span>Fecha</span><strong>${esc(formatDate(session.created_at))}</strong></div></div>
@@ -180,12 +185,13 @@ function dossierHtml(session) {
       ${blocks.map((block) => `<div class="answer-block"><h4>${esc(block.title)}</h4><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl></div>`).join('')}
       <div class="answer-block"><h4>Asignaturas</h4><dl><div class="qa"><dd>${(session.academic_subjects || []).map((subject) => esc(subject.name)).join(', ') || 'Sin asignaturas registradas'}</dd></div></dl></div></section>
     <section class="recommendations"><div class="section-title"><h3>Recomendaciones</h3><span>${recommendations.length + locked} destinos</span></div><div class="rec-list">
-      ${recommendations.map((item, index) => recHtml(item, index + 1)).join('')}${Array.from({ length: locked }, (_, index) => lockedRecHtml(recommendations.length + index + 1)).join('')}
+      ${recommendations.map((item, index) => recHtml(item, index + 1, feedback.get(item.program_code))).join('')}${Array.from({ length: locked }, (_, index) => lockedRecHtml(recommendations.length + index + 1)).join('')}
     </div></section></div>`;
 }
 
-function recHtml(item, rank) {
-  return `<div class="rec"><span class="rec-rank">${rank}</span><span><strong>${esc(item.career_name)}</strong><small>${esc(item.university)} · ${esc(item.city)}</small></span><span class="compat">${esc(item.compatibility)}%</span></div>`;
+function recHtml(item, rank, decision) {
+  const answer = decision ? `<small class="student-feedback ${esc(decision)}">El alumno indicó: ${decision === 'approved' ? 'Sí' : 'No'}</small>` : '';
+  return `<div class="rec"><span class="rec-rank">${rank}</span><span><strong>${esc(item.career_name)}</strong><small>${esc(item.university)} · ${esc(item.city)}</small>${answer}</span><span class="compat">${esc(item.compatibility)}%</span></div>`;
 }
 
 function lockedRecHtml(rank) {

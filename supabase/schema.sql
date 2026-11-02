@@ -45,6 +45,15 @@ create table if not exists public.schools (
   status text not null default 'approved' check (status in ('approved', 'disabled'))
 );
 
+create table if not exists public.recommendation_feedback (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  matching_session_id uuid not null references public.matching_sessions(id) on delete cascade,
+  program_code text not null check (char_length(program_code) between 2 and 160),
+  decision text not null check (decision in ('approved', 'rejected')),
+  unique (matching_session_id, program_code)
+);
+
 alter table public.matching_sessions
   add column if not exists school_id uuid references public.schools(id) on delete set null;
 
@@ -82,8 +91,13 @@ create index if not exists matching_sessions_selected_area_idx
   on public.matching_sessions (selected_area);
 create index if not exists matching_sessions_school_id_idx
   on public.matching_sessions (school_id, created_at desc);
+create index if not exists recommendation_feedback_program_idx
+  on public.recommendation_feedback (program_code, decision);
+create index if not exists recommendation_feedback_created_at_idx
+  on public.recommendation_feedback (created_at desc);
 
 alter table public.matching_sessions enable row level security;
+alter table public.recommendation_feedback enable row level security;
 alter table public.schools enable row level security;
 alter table public.school_applications enable row level security;
 alter table public.admin_profiles enable row level security;
@@ -92,10 +106,12 @@ alter table public.admin_profiles enable row level security;
 -- mediante SUPABASE_SECRET_KEY, puede leer o escribir. No se crean políticas
 -- públicas y se retiran explícitamente los permisos de las claves de cliente.
 revoke all on table public.matching_sessions from anon, authenticated;
+revoke all on table public.recommendation_feedback from anon, authenticated;
 revoke all on table public.schools from anon, authenticated;
 revoke all on table public.school_applications from anon, authenticated;
 revoke all on table public.admin_profiles from anon, authenticated;
 grant all on table public.matching_sessions to service_role;
+grant all on table public.recommendation_feedback to service_role;
 grant all on table public.schools to service_role;
 grant all on table public.school_applications to service_role;
 grant all on table public.admin_profiles to service_role;
