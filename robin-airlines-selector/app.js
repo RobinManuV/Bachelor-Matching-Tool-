@@ -7,12 +7,31 @@ const isEmbed = urlParams.get('embed') === '1';
 if (isFramed) document.documentElement.classList.add('is-iframe');
 if (isEmbed) document.documentElement.classList.add('is-embed');
 
+const parentOrigin = isFramed
+  ? (location.ancestorOrigins && location.ancestorOrigins[0]) || (document.referrer ? new URL(document.referrer).origin : '')
+  : '';
+const canMessageParent = parentOrigin === 'https://project-robin.com'
+  || parentOrigin === 'https://www.project-robin.com'
+  || /^https:\/\/[^/]+\.netlify\.app$/.test(parentOrigin)
+  || /^http:\/\/localhost:\d+$/.test(parentOrigin);
+
+function contentHeight() {
+  const bodyRect = document.body.getBoundingClientRect();
+  let height = Math.ceil(bodyRect.height);
+  if (!isEmbed) return height;
+  document.querySelectorAll('.notice, .zoom, .toast').forEach((element) => {
+    const style = getComputedStyle(element);
+    if (style.position !== 'absolute' || style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0 || !element.getClientRects().length) return;
+    height = Math.max(height, Math.ceil(element.getBoundingClientRect().bottom - bodyRect.top));
+  });
+  return height;
+}
 function postHeight() {
-  if (isFramed) parent.postMessage({ type: 'rbmt:height', height: document.documentElement.scrollHeight }, 'https://project-robin.com');
+  if (canMessageParent) parent.postMessage({ type: 'rbmt:height', height: contentHeight() }, parentOrigin);
 }
 function postScrollTop() {
-  if (!isFramed) return;
-  parent.postMessage({ type: 'rbmt:scrollTop' }, 'https://project-robin.com');
+  if (!canMessageParent) return;
+  parent.postMessage({ type: 'rbmt:scrollTop' }, parentOrigin);
   requestAnimationFrame(postHeight);
   setTimeout(postHeight, 650);
 }
@@ -188,6 +207,15 @@ const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const uiLocale = () => window.RobinI18n?.getLocale() || 'es';
 const tr = (value) => window.RobinI18n?.t(value) || value;
+const subjectLevelLabel = (name) => uiLocale() === 'en' ? `${tr(name)} level` : uiLocale() === 'pt-PT' ? `Nível de ${tr(name)}` : `Nivel de ${name}`;
+const removeSubjectLabel = (name) => uiLocale() === 'en' ? `Remove ${tr(name)}` : uiLocale() === 'pt-PT' ? `Remover ${tr(name)}` : `Quitar ${name}`;
+const questionWord = (count) => count === 1 ? (uiLocale() === 'en' ? 'question' : uiLocale() === 'pt-PT' ? 'pergunta' : 'pregunta') : tr('preguntas');
+function localErrorMessage(error, fallback = 'El recomendador no está disponible en este momento.') {
+  const source = String(error?.message || error || '');
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(source)) return tr('No se ha podido conectar con el recomendador.');
+  const translated = tr(source);
+  return uiLocale() === 'es' || translated !== source ? translated : tr(fallback);
+}
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const norm = (o) => (typeof o === 'string' ? { label: o, value: o } : o);
@@ -231,15 +259,18 @@ const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'ciudad', '
 const F = {}; KEYS.forEach((k) => { F[k] = $('#t-' + k); }); F.consent = $('#t-consent');
 const now = new Date();
 const boardTime = new Date(now.getTime() + 15 * 60000);
-$('#p-date').textContent = now.toLocaleDateString(uiLocale(), { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
-$('#p-time').textContent = boardTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+function renderDepartureTime() {
+  $('#p-date').textContent = now.toLocaleDateString(uiLocale(), { day: '2-digit', month: 'short' }).replace('.', '').toUpperCase();
+  $('#p-time').textContent = boardTime.toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' });
+}
+renderDepartureTime();
 
 function barcode(str) {
   let h = hash(str || 'robin'), x = 0; const bars = [];
   for (let i = 0; i < 70; i++) { h = Math.imul(h ^ (h >>> 13), 2654435761) >>> 0; const w = 1 + (h % 3); if (i % 2 === 0) bars.push(`<rect x="${x}" y="0" width="${w}" height="40"/>`); x += w; }
   return `<svg viewBox="0 0 ${x} 40" preserveAspectRatio="none" width="100%" height="44"><g fill="currentColor">${bars.join('')}</g></svg>`;
 }
-function setDD(el, value, placeholder) { el.textContent = value || placeholder; el.classList.toggle('empty', !value); }
+function setDD(el, value, placeholder) { el.textContent = value || tr(placeholder); el.classList.toggle('empty', !value); }
 function renderPass() {
   const t = S.ticket;
   const name = (t.apellidos || t.nombre) ? `${(t.apellidos || '—').toUpperCase()} / ${(t.nombre || '—').toUpperCase()}` : '';
@@ -248,7 +279,7 @@ function renderPass() {
   setDD($('#p-contact'), [t.email, t.telefono].filter(Boolean).join(' · '), 'correo · teléfono');
   const oc = originCode();
   const o = $('#p-orig'); o.textContent = oc || '···'; o.classList.toggle('empty', !oc);
-  $('#p-orig-city').textContent = [t.ciudad, t.pais].filter(Boolean).join(', ') || 'Tu ciudad';
+  $('#p-orig-city').textContent = [t.ciudad, t.pais].filter(Boolean).join(', ') || tr('Tu ciudad');
   $('#leg').textContent = oc ? ` · ${oc} → UNI` : '';
   const seed = (t.nombre + t.apellidos).trim();
   const seat = seed ? `${3 + (hash(seed) % 26)}A` : '—';
@@ -292,12 +323,12 @@ $('#ticket-form').addEventListener('submit', async (e) => {
 
 /* ================= Ruta (pregunta 14) ================= */
 function renderRuta() {
-  $('#areas').innerHTML = AREAS.map((a) => `<button type="button" class="area" data-k="${a.key}" aria-pressed="${S.area === a.key}"><span class="acode">${esc(a.code)}</span><span class="aname">${esc(a.name)}</span><span class="aex">${esc(a.ex)}</span></button>`).join('');
+  $('#areas').innerHTML = AREAS.map((a) => `<button type="button" class="area" data-k="${a.key}" aria-pressed="${S.area === a.key}"><span class="acode">${esc(a.code)}</span><span class="aname">${esc(tr(a.name))}</span><span class="aex">${esc(tr(a.ex))}</span></button>`).join('');
   const bl = blocks(); const oc = originCode() || 'ORG'; const area = areaBy(S.area);
   const count = (b) => (b.key === 'asignaturas' ? tr('1 pantalla') : `${b.qs.length}${b.key === 'general' && !S.answers.g_sistema ? '–18' : ''} ${tr('preg.')}`);
   const rows = [
     `<li><span class="sc">${esc(oc)}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(S.ticket.ciudad || tr('Tu ciudad'))}</span><span class="sq">${tr('Origen')}</span></li>`,
-    ...bl.map((b) => `<li class="${AREA_BLOCKS[b.key] ? 'esc' : ''}"><span class="sc">${b.code}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(b.name)}</span><span class="sq">${count(b)}</span></li>`),
+    ...bl.map((b) => `<li class="${AREA_BLOCKS[b.key] ? 'esc' : ''}"><span class="sc">${b.code}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(tr(b.name))}</span><span class="sq">${count(b)}</span></li>`),
     `<li class="end"><span class="sc">UNI</span><span class="dot" aria-hidden="true"></span><span class="sn">${tr('La universidad')}${area ? `<small>${tr('Rumbo:')} ${esc(tr(area.name))}</small>` : ''}</span><span class="sq">${tr('Destino')}</span></li>`,
   ];
   $('#stops').innerHTML = rows.join('');
@@ -560,9 +591,9 @@ function renderRoute(final) {
   $('#track').setAttribute('aria-label', final ? tr('Llegando al destino') : routeLabel);
 }
 function setBubble(meta, text, hint) {
-  $('#qmeta-txt').textContent = meta;
-  $('#qtext').textContent = text;
-  $('#qhint').textContent = hint || '';
+  $('#qmeta-txt').textContent = tr(meta);
+  $('#qtext').textContent = tr(text);
+  $('#qhint').textContent = tr(hint || '');
   $('#qhint').hidden = !hint;
 }
 function setActions(o) {
@@ -570,7 +601,7 @@ function setActions(o) {
   back.hidden = !!o.none;
   skip.hidden = !o.skip || !!o.none;
   next.hidden = !!o.none || !!o.noNext;
-  next.textContent = o.label || 'Continuar';
+  next.textContent = tr(o.label || 'Continuar');
   next.insertAdjacentHTML('beforeend', ICON.arrow);
   next.disabled = !!o.disabled;
 }
@@ -607,13 +638,13 @@ function renderStep(dir) {
     if (S.q < 0) return renderIntro(blk, bl);
     const q = blk.qs[S.q];
     const typeHint = { single: 'Elige una opción.', multi: q.max ? `Elige hasta ${q.max}.` : 'Puedes elegir varias.', slider: 'Desliza para responder.', textarea: 'Con un par de frases basta.', text: '', subjects: '' }[q.type];
-    const hint = q.hint || [q.optional ? 'Opcional.' : '', typeHint].filter(Boolean).join(' ');
+    const hint = q.hint ? tr(q.hint) : [q.optional ? tr('Opcional.') : '', tr(typeHint)].filter(Boolean).join(' ');
     const progress = uiLocale() === 'en'
       ? `Question ${S.q + 1} of ${blk.qs.length}`
       : uiLocale() === 'pt-PT'
         ? `Pergunta ${S.q + 1} de ${blk.qs.length}`
         : `Pregunta ${S.q + 1} de ${blk.qs.length}`;
-    setBubble(`${blk.code} · ${progress}`, q.q, hint);
+    setBubble(`${blk.code} · ${progress}`, tr(q.q), hint);
     const box = document.createElement('div');   // contenedor nuevo: los listeners no se acumulan
     $('#answers').replaceChildren(box);
     RENDER[q.type](box, q);
@@ -623,12 +654,12 @@ function renderStep(dir) {
 }
 function renderIntro(blk, bl) {
   const n = blk.qs.length;
-  setBubble(`Escala ${S.b + 1} de ${bl.length}`, localizedBlockLine(blk, n), '');
-  $('#answers').innerHTML = `<div class="board" role="group" aria-label="Próxima escala">
-      <div class="lbl">Robin Airlines · Próxima escala</div>
+  setBubble(tr(`Escala ${S.b + 1} de ${bl.length}`), localizedBlockLine(blk, n), '');
+  $('#answers').innerHTML = `<div class="board" role="group" aria-label="${esc(tr('Próxima escala'))}">
+      <div class="lbl">${esc(tr('Robin Airlines · Próxima escala'))}</div>
       <div class="flap" aria-hidden="true">${blk.code.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</div>
-      <div class="bname">${esc(blk.name)}</div>
-      <div class="bmeta"><span><b>${n}</b> preguntas</span><span>unos <b>${Math.max(1, Math.round(n * 15 / 60))}</b> min</span></div>
+      <div class="bname">${esc(tr(blk.name))}</div>
+      <div class="bmeta"><span><b>${n}</b> ${esc(questionWord(n))}</span><span>${esc(tr('unos'))} <b>${Math.max(1, Math.round(n * 15 / 60))}</b> min</span></div>
     </div>`;
   setActions({ label: S.b === 0 ? 'Empezar' : 'Seguir volando' });
 }
@@ -679,7 +710,7 @@ const RENDER = {
   single(box, q) {
     const opts = q.options.map(norm);
     const cur = S.answers[q.id];
-    box.innerHTML = `<div class="opts ${layoutClass(opts.map((o) => o.label))}" role="group" aria-label="${esc(q.q)}">${opts.map((o) => `<button type="button" class="opt" data-v="${esc(o.value)}" aria-pressed="${cur === o.value}"><span>${esc(o.label)}</span><span class="tick">${ICON.check}</span></button>`).join('')}</div>`;
+    box.innerHTML = `<div class="opts ${layoutClass(opts.map((o) => tr(o.label)))}" role="group" aria-label="${esc(tr(q.q))}">${opts.map((o) => `<button type="button" class="opt" data-v="${esc(o.value)}" aria-pressed="${cur === o.value}"><span>${esc(tr(o.label))}</span><span class="tick">${ICON.check}</span></button>`).join('')}</div>`;
     box.querySelector('.opts').addEventListener('click', (e) => {
       const b = e.target.closest('.opt'); if (!b || busy) return;
       S.answers[q.id] = b.dataset.v;
@@ -697,17 +728,17 @@ const RENDER = {
     const sel = new Set(S.answers[q.id] || []);
     const actions = () => setActions({ disabled: !q.optional && !sel.size, skip: q.optional && !sel.size, label: nextLabel() });
     const draw = () => {
-      box.innerHTML = `<div class="chips" role="group" aria-label="${esc(q.q)}">${opts.map((o) => {
+      box.innerHTML = `<div class="chips" role="group" aria-label="${esc(tr(q.q))}">${opts.map((o) => {
         const on = sel.has(o.value); const maxed = q.max && !on && sel.size >= q.max;
-        return `<button type="button" class="chip${maxed ? ' maxed' : ''}" data-v="${esc(o.value)}" aria-pressed="${on}"${maxed ? ' aria-disabled="true"' : ''}>${ICON.check}${esc(o.label)}</button>`;
-      }).join('')}</div><p class="count">${sel.size ? `${sel.size} ${sel.size === 1 ? 'elegida' : 'elegidas'}` : 'Nada elegido todavía'}${q.max ? ` · máximo ${q.max}` : ''}</p>`;
+        return `<button type="button" class="chip${maxed ? ' maxed' : ''}" data-v="${esc(o.value)}" aria-pressed="${on}"${maxed ? ' aria-disabled="true"' : ''}>${ICON.check}${esc(tr(o.label))}</button>`;
+      }).join('')}</div><p class="count">${sel.size ? `${sel.size} ${esc(tr(sel.size === 1 ? 'elegida' : 'elegidas'))}` : esc(tr('Nada elegido todavía'))}${q.max ? ` · ${esc(tr('máximo'))} ${q.max}` : ''}</p>`;
     };
     draw();
     box.addEventListener('click', (e) => {
       const b = e.target.closest('.chip'); if (!b) return;
       const v = b.dataset.v;
       if (sel.has(v)) sel.delete(v);
-      else if (q.max && sel.size >= q.max) { showErr(`Puedes elegir hasta ${q.max}. Quita una para cambiarla.`); return; }
+      else if (q.max && sel.size >= q.max) { showErr(tr(`Puedes elegir hasta ${q.max}. Quita una para cambiarla.`)); return; }
       else sel.add(v);
       if (sel.size) S.answers[q.id] = Array.from(sel); else delete S.answers[q.id];
       $('#q-err').hidden = true;
@@ -731,9 +762,9 @@ function renderSlider(box, q) {
     : `${Number(v).toLocaleString(uiLocale(), { minimumFractionDigits: q.step < 1 ? 1 : 0, maximumFractionDigits: 1 })}<small>/ ${q.max}</small>`);
   box.innerHTML = `<div class="slider">
       <div class="sval" id="${id}-v" aria-hidden="true">${fmt(v0)}</div>
-      <label class="sr" for="${id}">${esc(q.q)}</label>
+      <label class="sr" for="${id}">${esc(tr(q.q))}</label>
       <input type="range" id="${id}" min="${q.min}" max="${q.max}" step="${q.step}" value="${v0}">
-      <div class="ends"><span>${esc(q.left)}</span><span>${esc(q.right)}</span></div>
+      <div class="ends"><span>${esc(tr(q.left))}</span><span>${esc(tr(q.right))}</span></div>
     </div>`;
   const r = $('#' + id, box);
   const paint = () => {
@@ -753,9 +784,9 @@ function textLike(box, q, multiline) {
   const quickOn = q.quick && q.quick.includes(cur);
   const val = quickOn ? '' : cur;
   const input = multiline
-    ? `<label class="sr" for="${id}">${esc(q.q)}</label><textarea class="tinput" id="${id}" maxlength="600" rows="3" placeholder="Escribe aquí…">${esc(val)}</textarea><div class="tcount"><span id="${id}-c">${val.length}</span>/600</div>`
-    : `<label class="sr" for="${id}">${esc(q.q)}</label><input class="tinput" id="${id}" type="text" maxlength="120" value="${esc(val)}" placeholder="${esc(q.ph || 'Escribe aquí…')}" autocomplete="off">`;
-  const quick = q.quick ? `<div class="quick-row"><span>o</span>${q.quick.map((t) => `<button type="button" class="chip" data-quick="${esc(t)}" aria-pressed="${cur === t}">${esc(t)}</button>`).join('')}</div>` : '';
+    ? `<label class="sr" for="${id}">${esc(tr(q.q))}</label><textarea class="tinput" id="${id}" maxlength="600" rows="3" placeholder="${esc(tr('Escribe aquí…'))}">${esc(val)}</textarea><div class="tcount"><span id="${id}-c">${val.length}</span>/600</div>`
+    : `<label class="sr" for="${id}">${esc(tr(q.q))}</label><input class="tinput" id="${id}" type="text" maxlength="120" value="${esc(val)}" placeholder="${esc(tr(q.ph || 'Escribe aquí…'))}" autocomplete="off">`;
+  const quick = q.quick ? `<div class="quick-row"><span>${esc(tr('o'))}</span>${q.quick.map((t) => `<button type="button" class="chip" data-quick="${esc(t)}" aria-pressed="${cur === t}">${esc(tr(t))}</button>`).join('')}</div>` : '';
   box.innerHTML = input + quick;
   const el = $('#' + id, box);
   const ok = () => el.value.trim().length >= (q.min || 2);
@@ -791,17 +822,17 @@ function renderSubjects(box, q) {
   const draw = () => {
     const names = new Set(list.map((x) => x.name));
     box.innerHTML = `
-      <div class="chips" role="group" aria-label="Asignaturas frecuentes">${Q_SUBJECTS.map((x) => `<button type="button" class="chip" data-n="${esc(x.label)}" aria-pressed="${names.has(x.label)}">${ICON.check}${esc(x.label)}</button>`).join('')}</div>
-      <div class="addrow"><label class="sr" for="sub-other">Otra asignatura</label><input class="tinput" id="sub-other" type="text" maxlength="160" placeholder="Otra asignatura, p. ej. Dibujo Técnico II" autocomplete="off"><button type="button" class="btn ghost" id="sub-add">Añadir</button></div>
-      ${list.length ? `<ul class="sublist">${list.map((x, i) => `<li><span class="sname">${esc(x.name)}</span>${lv.length ? `<div class="seg" role="radiogroup" aria-label="Nivel de ${esc(x.name)}">${lv.map((l) => `<label><input type="radio" name="lv-${i}" value="${l.value}"${x.level === l.value ? ' checked' : ''} data-i="${i}"><span>${esc(l.label)}</span></label>`).join('')}</div>` : ''}<button type="button" class="iconbtn" data-rm="${i}" aria-label="Quitar ${esc(x.name)}">${ICON.x}</button></li>`).join('')}</ul>` : '<p class="empty-note">Añade al menos una asignatura.</p>'}
-      <p class="count">${list.length} de ${MAX_SUBJECTS} como máximo</p>`;
+      <div class="chips" role="group" aria-label="${esc(tr('Asignaturas frecuentes'))}">${Q_SUBJECTS.map((x) => `<button type="button" class="chip" data-n="${esc(x.label)}" aria-pressed="${names.has(x.label)}">${ICON.check}${esc(tr(x.label))}</button>`).join('')}</div>
+      <div class="addrow"><label class="sr" for="sub-other">${esc(tr('Otra asignatura'))}</label><input class="tinput" id="sub-other" type="text" maxlength="160" placeholder="${esc(tr('Otra asignatura, p. ej. Dibujo Técnico II'))}" autocomplete="off"><button type="button" class="btn ghost" id="sub-add">${esc(tr('Añadir'))}</button></div>
+      ${list.length ? `<ul class="sublist">${list.map((x, i) => `<li><span class="sname">${esc(tr(x.name))}</span>${lv.length ? `<div class="seg" role="radiogroup" aria-label="${esc(subjectLevelLabel(x.name))}">${lv.map((l) => `<label><input type="radio" name="lv-${i}" value="${l.value}"${x.level === l.value ? ' checked' : ''} data-i="${i}"><span>${esc(tr(l.label))}</span></label>`).join('')}</div>` : ''}<button type="button" class="iconbtn" data-rm="${i}" aria-label="${esc(removeSubjectLabel(x.name))}">${ICON.x}</button></li>`).join('')}</ul>` : `<p class="empty-note">${esc(tr('Añade al menos una asignatura.'))}</p>`}
+      <p class="count">${esc(tr(`${list.length} de ${MAX_SUBJECTS} como máximo`))}</p>`;
     const ready = list.length > 0 && (!lv.length || list.every((x) => x.level));
-    setActions({ disabled: !ready, label: 'Aterrizar' });
+    setActions({ disabled: !ready, label: tr('Aterrizar') });
   };
   const add = (name) => {
     name = name.trim(); if (!name) return;
     if (list.some((x) => x.name.toLowerCase() === name.toLowerCase())) return;
-    if (list.length >= MAX_SUBJECTS) { showErr(`Puedes añadir hasta ${MAX_SUBJECTS} asignaturas.`); return; }
+    if (list.length >= MAX_SUBJECTS) { showErr(tr(`Puedes añadir hasta ${MAX_SUBJECTS} asignaturas.`)); return; }
     list.push({ name, level: '' });
   };
   draw();
@@ -823,7 +854,7 @@ function renderSubjects(box, q) {
   });
   box.addEventListener('keydown', (e) => { if (e.target.id === 'sub-other' && e.key === 'Enter') { e.preventDefault(); add(e.target.value); draw(); $('#sub-other', box).focus(); } });
 }
-function showErr(msg) { const el = $('#q-err'); el.textContent = msg; el.hidden = false; }
+function showErr(msg) { const el = $('#q-err'); el.textContent = tr(msg); el.hidden = false; }
 
 /* ---- Navegación ---- */
 function next() {
@@ -863,7 +894,7 @@ async function land() {
   setActions({ none: true });
   const resultPromise = requestMatches().then((results) => ({ results }), (error) => ({ error }));
   const steps = ['Datos y situación académica leídos', 'Intereses y asignaturas cruzados', 'Catálogo real consultado'];
-  $('#answers').innerHTML = `<ul class="checklist">${steps.map((s) => `<li><span class="ck">${ICON.check}</span>${esc(s)}</li>`).join('')}</ul>`;
+  $('#answers').innerHTML = `<ul class="checklist">${steps.map((s) => `<li><span class="ck">${ICON.check}</span>${esc(tr(s))}</li>`).join('')}</ul>`;
   const items = $$('#answers .checklist li');
   const ticks = (async () => { for (const [i, li] of items.slice(0, 2).entries()) { await wait([900, 1200][i]); li.classList.add('on'); } })();
   await Promise.all([mvLand(), ticks]);
@@ -880,7 +911,7 @@ async function land() {
   } catch (error) {
     busy = false;
     setBubble('No hemos podido aterrizar', 'No se pudieron calcular tus destinos.', 'Comprueba la conexión y vuelve a intentarlo. Tus respuestas siguen aquí.');
-    $('#answers').innerHTML = `<p class="err-inline">${esc(error.message)}</p>`;
+    $('#answers').innerHTML = `<p class="err-inline">${esc(localErrorMessage(error))}</p>`;
     setActions({ label: 'Reintentar' });
   }
 }
@@ -912,7 +943,7 @@ async function requestMatches() {
 }
 
 function renderDestino() {
-  $('#dest-title').textContent = S.ticket.nombre ? `Has aterrizado, ${S.ticket.nombre}` : 'Has aterrizado';
+  $('#dest-title').textContent = tr(S.ticket.nombre ? `Has aterrizado, ${S.ticket.nombre}` : 'Has aterrizado');
   const res = S.results || [];
   const C = 2 * Math.PI * 52;
   $('#slides').innerHTML = res.map((r, i) => {
@@ -922,47 +953,48 @@ function renderDestino() {
     const numerusFixus = r.numerus_fixus
       ? `Numerus fixus${r.numerus_fixus_seats ? `: ${r.numerus_fixus_seats} ${uiLocale() === 'en' ? 'places' : uiLocale() === 'pt-PT' ? 'vagas' : 'plazas'}` : ''}`
       : tr('Sin numerus fixus indicado');
-    return `<div class="slide" role="group" aria-roledescription="destino" aria-label="Destino ${i + 1} de ${res.length}: ${esc(r.career_name)}">
+    const destinationLabel = `${tr(`Destino ${i + 1} de ${res.length}`)}: ${r.career_name}`;
+    return `<div class="slide" role="group" aria-roledescription="${esc(tr('destino'))}" aria-label="${esc(destinationLabel)}">
       <article class="card">
         <div class="photo${genericImage ? ' generic' : ''}">
           <img src="${image}" alt="${genericImage ? '' : esc(r.city)}" loading="lazy">
-          <span class="rank">Destino ${i + 1} de ${res.length}</span>
-          <div class="scrim"><span class="ccode">${esc(r.university_code || 'UNI')}</span><span class="cname">${esc(r.city)}<br>Países Bajos</span></div>
+          <span class="rank">${esc(tr(`Destino ${i + 1} de ${res.length}`))}</span>
+          <div class="scrim"><span class="ccode">${esc(r.university_code || 'UNI')}</span><span class="cname">${esc(r.city)}<br>${esc(tr('Países Bajos'))}</span></div>
         </div>
         <div class="cbody">
           <div>
             <h2 class="career">${esc(r.career_name)}</h2>
             <p class="uni">${esc(r.university)}</p>
             <p class="desc">${esc(tr(areaBy(S.area)?.name || r.area))}${r.subarea ? `, ${tr('especialidad en')} ${esc(r.subarea)}` : ''}.</p>
-            <div class="facts"><span class="fact">${esc(r.duration_years)} años</span><span class="fact">${esc(r.degree_type)}</span><span class="fact">Programa en inglés</span><span class="fact">${esc(numerusFixus)}</span></div>
+            <div class="facts"><span class="fact">${esc(tr(`${r.duration_years} años`))}</span><span class="fact">${esc(r.degree_type)}</span><span class="fact">${esc(tr('Programa en inglés'))}</span><span class="fact">${esc(numerusFixus)}</span></div>
             <div class="notes">
-              <div><h4>Por qué encaja</h4><ul><li>${esc(r.reason || 'Coincide con tu perfil general.')}</li></ul></div>
-              <div class="check"><h4>Afinidades detectadas</h4><ul>${(strengths.length ? strengths : [r.subarea || r.area]).map((value) => `<li>${esc(value)}</li>`).join('')}</ul></div>
+              <div><h4>${esc(tr('Por qué encaja'))}</h4><ul><li>${esc(r.reason || tr('Coincide con tu perfil general.'))}</li></ul></div>
+              <div class="check"><h4>${esc(tr('Afinidades detectadas'))}</h4><ul>${(strengths.length ? strengths : [r.subarea || r.area]).map((value) => `<li>${esc(value)}</li>`).join('')}</ul></div>
             </div>
           </div>
           <div class="score real-score">
-            <div class="ring" role="img" aria-label="Compatibilidad ${r.compatibility}%">
+            <div class="ring" role="img" aria-label="${esc(tr(`Compatibilidad ${r.compatibility}%`))}">
               <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rt" cx="60" cy="60" r="52" fill="none" stroke-width="11"/><circle class="rv" cx="60" cy="60" r="52" fill="none" stroke-width="11" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-off="${(C * (1 - r.compatibility / 100)).toFixed(1)}"/></svg>
-              <div class="rlabel"><span class="pct">${r.compatibility}%</span><span class="pl">Compatibilidad</span></div>
+              <div class="rlabel"><span class="pct">${r.compatibility}%</span><span class="pl">${esc(tr('Compatibilidad'))}</span></div>
             </div>
             <div class="match-feedback" data-feedback="${esc(r.program_code)}">
-              <p>¿Esta opción va contigo?</p>
-              <div class="feedback-actions" role="group" aria-label="Valora esta recomendación">
-                <button type="button" data-feedback-decision="approved" aria-pressed="${S.feedback[r.program_code] === 'approved'}">Sí</button>
-                <button type="button" data-feedback-decision="rejected" aria-pressed="${S.feedback[r.program_code] === 'rejected'}">No</button>
+              <p>${esc(tr('¿Esta opción va contigo?'))}</p>
+              <div class="feedback-actions" role="group" aria-label="${esc(tr('Valora esta recomendación'))}">
+                <button type="button" data-feedback-decision="approved" aria-pressed="${S.feedback[r.program_code] === 'approved'}">${esc(tr('Sí'))}</button>
+                <button type="button" data-feedback-decision="rejected" aria-pressed="${S.feedback[r.program_code] === 'rejected'}">${esc(tr('No'))}</button>
               </div>
-              <span class="feedback-status" role="status">${S.feedback[r.program_code] ? 'Gracias, tendremos en cuenta tu respuesta.' : ''}</span>
+              <span class="feedback-status" role="status">${S.feedback[r.program_code] ? esc(tr('Gracias, tendremos en cuenta tu respuesta.')) : ''}</span>
             </div>
           </div>
           <div class="ccta">
-            ${r.website_url ? `<a class="btn" href="${esc(r.website_url)}" target="_top" rel="noopener">Información oficial</a>` : ''}
-            <a class="btn ghost" href="https://project-robin.com/servicios/asesoramiento-completo/" target="_top" rel="noopener">Ver asesoramiento</a>
+            ${r.website_url ? `<a class="btn" href="${esc(r.website_url)}" target="_top" rel="noopener">${esc(tr('Información oficial'))}</a>` : ''}
+            <a class="btn ghost" href="https://project-robin.com/servicios/asesoramiento-completo/" target="_top" rel="noopener">${esc(tr('Ver asesoramiento'))}</a>
           </div>
         </div>
       </article>
     </div>`;
   }).join('');
-  $('#dots').innerHTML = res.map((_, i) => `<button type="button" aria-label="Ver destino ${i + 1}" data-dot="${i}"></button>`).join('');
+  $('#dots').innerHTML = res.map((_, i) => `<button type="button" aria-label="${esc(tr(`Ver destino ${i + 1}`))}" data-dot="${i}"></button>`).join('');
   updateSlide(0, true);
   requestAnimationFrame(() => requestAnimationFrame(() => fillSlide(0)));
 }
@@ -973,9 +1005,9 @@ slidesEl.addEventListener('click', async (event) => {
   const feedback = button.closest('[data-feedback]');
   const status = $('.feedback-status', feedback);
   const buttons = $$('button', feedback);
-  if (!S.sessionId) { status.textContent = 'No se ha podido guardar la valoración de esta sesión.'; return; }
+  if (!S.sessionId) { status.textContent = tr('No se ha podido guardar la valoración de esta sesión.'); return; }
   buttons.forEach((item) => { item.disabled = true; });
-  status.textContent = 'Guardando…';
+  status.textContent = tr('Guardando…');
   try {
     const response = await fetch('/api/feedback', {
       method: 'POST',
@@ -990,9 +1022,9 @@ slidesEl.addEventListener('click', async (event) => {
     if (!response.ok) throw new Error(data.error || 'No se ha podido guardar la valoración.');
     S.feedback[feedback.dataset.feedback] = button.dataset.feedbackDecision;
     buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
-    status.textContent = 'Gracias, tendremos en cuenta tu respuesta.';
+    status.textContent = tr('Gracias, tendremos en cuenta tu respuesta.');
   } catch (error) {
-    status.textContent = error.message;
+    status.textContent = localErrorMessage(error, 'No se ha podido guardar la valoración.');
   } finally {
     buttons.forEach((item) => { item.disabled = false; });
   }
@@ -1067,6 +1099,7 @@ function boot() {
 }
 boot();
 window.addEventListener('robin:languagechange', () => {
+  renderDepartureTime();
   renderPass();
   if (S.phase === 'ruta') renderRuta();
   else if (S.phase === 'vuelo') renderStep('none');

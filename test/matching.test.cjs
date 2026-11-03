@@ -2,8 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadData, buildUser, buildAirlinesUser } = require('../server.cjs');
 const rec = require('../lib/careers-recommender');
-const { generateSuggestions, buildHistoricalAdjustments, formatHistoricalFeedback } = require('../lib/career-suggestions');
+const { generateSuggestions, prepareCandidates, buildHistoricalAdjustments, formatHistoricalFeedback, signalTokens } = require('../lib/career-suggestions');
 const { chatCompletion } = require('../lib/anthropic-chat');
+const { analyzeOpenResponses, fallbackAnalysis, scoreCareerOpenText } = require('../lib/open-text-signals');
 const { normalizeLead, saveMatchSession } = require('../lib/match-storage');
 const { schoolPassword, schoolAccessCode, validateSchoolApplication, sessionForRole } = require('../lib/admin-access');
 const { normalizeFeedback, saveRecommendationFeedback } = require('../lib/recommendation-feedback');
@@ -45,6 +46,7 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
       g_colegio: 'Colegio de prueba', g_sistema: 'Bachillerato español',
       modalidad: 'Ciencias – tecnológico', g_nota: 8, g_fav: ['matematicas', 'fisica'],
       g_menos: ['historia'], g_estilo: 3, g_valora: ['innovacion'], g_rasgos: ['analitico', 'curioso'],
+      g_algo: 'Me interesa especialmente construir prototipos.',
       v_trabajo10: 'Quiero diseñar sistemas aeroespaciales.', v_prioridad: 'Pasión', v_paises: ['Países Bajos'],
       i_rama: ['Aeroespacial'], i_construir: 'Diseñar', i_matefis: 9, i_tecnico: 3,
     },
@@ -55,11 +57,110 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
   assert.equal(user.questionnaire.locale, 'pt-PT');
   assert.deepEqual(user.questionnaire.signals.areas, ['ingenierias']);
   assert.deepEqual(user.questionnaire.signals.asignaturas_fav, ['matematicas', 'fisica']);
+  assert.equal(user.questionnaire.signals.open_responses.g_algo.answer, 'Me interesa especialmente construir prototipos.');
+  assert.equal(user.questionnaire.signals.open_responses.v_trabajo10.answer, 'Quiero diseñar sistemas aeroespaciales.');
   const questions = user.questionnaire.blocks.flatMap((block) => block.items.map((item) => item.q));
   assert.ok(questions.includes('¿Qué modalidad de bachillerato cursas?'));
   assert.ok(!questions.includes('Ciudad y país donde resides actualmente'));
   assert.ok(!questions.includes('¿Te atrae más la investigación o la industria?'));
   assert.match(rec.fallbackRanking(rec.getCandidates(['ingenierias'], {}, 1), 'en')[0].reason, /matches your area of interest/);
+});
+
+test('las respuestas abiertas vagas no pesan y las concretas generan señales útiles', () => {
+  const vague = fallbackAnalysis({
+    v_trabajo10: { question: 'Trabajo en 10 años', answer: 'No lo sé, algo que me guste.' },
+  });
+  const concrete = fallbackAnalysis({
+    v_trabajo10: { question: 'Trabajo en 10 años', answer: 'Quiero diseñar motores de aviones y trabajar en investigación aeroespacial.' },
+  });
+  assert.ok(vague.informativeness < 0.25);
+  assert.ok(concrete.informativeness >= 0.7);
+  assert.ok(concrete.positive_terms.includes('aerospace engineering'));
+  assert.ok(concrete.positive_terms.includes('mechanical engineering'));
+
+  const aerospace = rec.findCareer('tud-aerospace-engineering');
+  const unrelated = rec.CAREERS.find((career) => career.area === 'Business & Economics');
+  assert.ok(scoreCareerOpenText(aerospace, concrete) > scoreCareerOpenText(unrelated, concrete));
+});
+
+test('una respuesta abierta concreta amplía candidatos sin sustituir el área elegida', () => {
+  const analysis = {
+    informativeness: 0.95,
+    positive_terms: ['aerospace engineering', 'aircraft propulsion', 'research'],
+    negative_terms: [], constraints: [], source_fields: ['v_trabajo10'], method: 'ai',
+  };
+  const candidates = prepareCandidates(['business'], { areas: ['business'], open_text_analysis: analysis }, [], [], 35);
+  assert.ok(candidates.slice(0, 10).some((career) => career.program_code === 'tud-aerospace-engineering'));
+  assert.ok(candidates.slice(0, 10).some((career) => career.area === 'Business & Economics'));
+  assert.ok(signalTokens({ open_text_analysis: analysis }).has('open:aerospace engineering'));
+});
+
+test('Claude puede estructurar respuestas abiertas sin inventar señales', async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.ANTHROPIC_API_KEY = 'clave_de_prueba';
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      model: 'modelo_de_prueba',
+      content: [{ type: 'text', text: JSON.stringify({
+        informativeness: 0.92,
+        summary: 'Objetivo aeroespacial concreto.',
+        positive_terms: ['aerospace engineering', 'research'],
+        negative_terms: [], constraints: [], source_fields: ['v_trabajo10'],
+      }) }],
+    }),
+  });
+  try {
+    const analysis = await analyzeOpenResponses({
+      v_trabajo10: { question: 'Trabajo en 10 años', answer: 'Quiero investigar sistemas de propulsión para aviones.' },
+    }, 'es');
+    assert.equal(analysis.method, 'ai');
+    assert.equal(analysis.informativeness, 0.92);
+    assert.deepEqual(analysis.positive_terms, ['aerospace engineering', 'research']);
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = previousKey;
+  }
+});
+
+test('el análisis abierto llega al ranking final y queda guardado como señal', async () => {
+  const previousKey = process.env.ANTHROPIC_API_KEY;
+  const previousFetch = global.fetch;
+  const analysis = {
+    informativeness: 0.95, summary: 'Objetivo aeroespacial concreto.',
+    positive_terms: ['aerospace engineering', 'research'], negative_terms: [], constraints: [], source_fields: ['v_trabajo10'],
+  };
+  const signals = {
+    areas: ['business'],
+    open_responses: { v_trabajo10: { question: 'Trabajo en 10 años', answer: 'Quiero investigar sistemas aeroespaciales.' } },
+  };
+  const selected = prepareCandidates(['business'], { ...signals, open_text_analysis: analysis }, [], [], 35).slice(0, 10);
+  let requestCount = 0;
+  process.env.ANTHROPIC_API_KEY = 'clave_de_prueba';
+  global.fetch = async () => {
+    requestCount += 1;
+    const text = requestCount === 1
+      ? JSON.stringify(analysis)
+      : JSON.stringify(selected.map((career, index) => ({
+        program_code: career.program_code, compatibility: 90 - index,
+        reason: 'Encaje comprobado.', strengths: ['perfil', 'objetivo'],
+      })));
+    return { ok: true, json: async () => ({ model: 'modelo_de_prueba', content: [{ type: 'text', text }] }) };
+  };
+  try {
+    const result = await generateSuggestions({
+      intereses: ['business'], locale: 'es',
+      questionnaire: { locale: 'es', signals, blocks: [{ title: 'Vocacional', items: [{ q: 'Trabajo en 10 años', a: 'Quiero investigar sistemas aeroespaciales.' }] }] },
+    });
+    assert.equal(requestCount, 2);
+    assert.equal(result.source, 'ai');
+    assert.equal(signals.open_text_analysis.method, 'ai');
+    assert.ok(result.items.some((career) => career.program_code === 'tud-aerospace-engineering'));
+  } finally {
+    global.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = previousKey;
+  }
 });
 
 test('el conector independiente conserva la petición a Claude', async () => {
@@ -139,7 +240,10 @@ test('las valoraciones se validan y generan una señal histórica por perfil', (
     decision: 'maybe',
   }), /valoración/);
 
-  const signals = { asignaturas_fav: ['matematicas', 'fisica'], rasgos: ['analitico'], prioridad: 'Pasión' };
+  const signals = {
+    asignaturas_fav: ['matematicas', 'fisica'], rasgos: ['analitico'], prioridad: 'Pasión',
+    open_text_analysis: { informativeness: 0.9, positive_terms: ['aerospace engineering'], negative_terms: [] },
+  };
   const history = [
     { program_code: 'tud-aerospace-engineering', decision: 'approved', signals },
     { program_code: 'tud-computer-science-and-engineering', decision: 'rejected', signals },

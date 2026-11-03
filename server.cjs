@@ -41,6 +41,14 @@ function formatSlider(def, value) {
   if (def.left && def.right) return `${value}/${def.max} (${def.left} ↔ ${def.right})`;
   return `${value}/${def.max}`;
 }
+function collectOpenResponses(blocks, answers) {
+  const responses = {};
+  blocks.forEach((block) => block.questions.forEach((def) => {
+    const answer = String(answers[def.id] || '').trim();
+    if (def.type === 'textarea' && answer) responses[def.id] = { question: def.q, answer };
+  }));
+  return responses;
+}
 
 function buildUser(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('Faltan respuestas');
@@ -96,6 +104,7 @@ function buildUser(payload) {
       prioridad: answers.v_prioridad || '',
       paises: answers.v_paises || [],
       areas: intereses,
+      open_responses: collectOpenResponses(blocks, answers),
     },
   };
   return { email, intereses, questionnaire, academic_system: academic.system, academic_subjects: academic.subjects };
@@ -179,6 +188,7 @@ function buildAirlinesUser(payload) {
         prioridad: answers.v_prioridad || '',
         paises: answers.v_paises || [],
         areas: intereses,
+        open_responses: collectOpenResponses(sourceBlocks, answers),
       },
     },
     academic_system: academic.system,
