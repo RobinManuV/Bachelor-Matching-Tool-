@@ -26,8 +26,9 @@ test('Cloudflare reenvía peticiones y respuestas sin salir del dominio público
   const { default: proxy } = await loadProxy();
   const originalFetch = globalThis.fetch;
   let upstreamRequest;
-  globalThis.fetch = async (request) => {
+  globalThis.fetch = async (request, options) => {
     upstreamRequest = request;
+    assert.equal(options.redirect, 'manual');
     return new Response(null, { status: 302, headers: { location: '/admin/' } });
   };
   try {

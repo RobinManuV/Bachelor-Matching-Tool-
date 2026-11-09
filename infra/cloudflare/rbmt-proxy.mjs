@@ -20,17 +20,11 @@ export default {
     const upstream = upstreamFor(publicUrl);
     if (!upstream) return fetch(request);
 
-    const headers = new Headers(request.headers);
-    headers.set('Origin', upstream.origin);
-    headers.set('X-Forwarded-Host', publicUrl.host);
-    headers.set('X-Forwarded-Prefix', PREFIX);
-    const response = await fetch(new Request(upstream, {
-      method: request.method,
-      headers,
-      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
-      duplex: 'half',
-      redirect: 'manual',
-    }));
+    const upstreamRequest = new Request(upstream, request);
+    upstreamRequest.headers.set('Origin', upstream.origin);
+    upstreamRequest.headers.set('X-Forwarded-Host', publicUrl.host);
+    upstreamRequest.headers.set('X-Forwarded-Prefix', PREFIX);
+    const response = await fetch(upstreamRequest, { redirect: 'manual' });
 
     const location = response.headers.get('location');
     if (!location) return response;
