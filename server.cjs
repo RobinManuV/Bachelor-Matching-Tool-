@@ -217,6 +217,17 @@ async function handler(req, res) {
     res.end(result.body);
     return;
   }
+  if (url.pathname === '/api/school/apply') {
+    const { handler: schoolApplyHandler } = require('./netlify/functions/school-apply.cjs');
+    const result = await schoolApplyHandler({
+      httpMethod: req.method,
+      headers: req.headers,
+      body: req.method === 'POST' ? JSON.stringify(await readBody(req)) : null,
+    });
+    res.writeHead(result.statusCode, result.headers);
+    res.end(result.body);
+    return;
+  }
   if (req.method === 'GET' && url.pathname === '/api/config') {
     return send(res, 200, { ...questionnaireData, academicSystems: ACADEMIC_SYSTEMS, areaLabels: AREA_LABELS, careerCount: CAREERS.length });
   }

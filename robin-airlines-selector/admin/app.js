@@ -1,6 +1,8 @@
 (() => {
 'use strict';
 
+const siteBaseUrl = new URL('../', document.currentScript?.src || location.href);
+const adminApiUrl = new URL('.netlify/functions/admin', siteBaseUrl);
 const app = document.querySelector('#app');
 const toast = document.querySelector('#toast');
 const SESSION_KEY = 'robin_matching_admin_session';
@@ -22,7 +24,9 @@ function showToast(message) {
 async function rawApi(route, options = {}) {
   const headers = { 'content-type': 'application/json', ...(options.headers || {}) };
   if (state.session?.access_token) headers.authorization = `Bearer ${state.session.access_token}`;
-  const response = await fetch(`/.netlify/functions/admin?route=${encodeURIComponent(route)}`, { method: options.method || 'GET', headers, body: options.body ? JSON.stringify(options.body) : undefined });
+  const requestUrl = new URL(adminApiUrl);
+  requestUrl.searchParams.set('route', route);
+  const response = await fetch(requestUrl, { method: options.method || 'GET', headers, body: options.body ? JSON.stringify(options.body) : undefined });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { const error = new Error(data.error || 'No se pudo completar la operación'); error.status = response.status; throw error; }
   return data;
@@ -107,7 +111,7 @@ function renderStudents() {
   const main = document.querySelector('#main'); const school = schoolOf(state.profile); const sessions = filteredSessions();
   if (sessions.length && !sessions.some((entry) => entry.id === state.selected)) state.selected = sessions[0].id;
   const selected = state.sessions.find((entry) => entry.id === state.selected);
-  const matchingUrl = school?.access_code ? `${location.origin}/?school=${encodeURIComponent(school.access_code)}` : '';
+  const matchingUrl = school?.access_code ? new URL(`?school=${encodeURIComponent(school.access_code)}`, siteBaseUrl).href : '';
   main.innerHTML = `<header class="page-head"><div><p>${state.profile.role === 'robin' ? 'Todos los vuelos' : esc(school?.name || 'Tu colegio')}</p><h1>Manifiesto de alumnos</h1></div><div class="page-tools"><label><span class="sr">Buscar alumno</span><input class="search" id="search" type="search" placeholder="Buscar nombre, correo o colegio" value="${esc(state.query)}"></label></div></header>
     <div class="content">${matchingUrl ? `<section class="share"><h3>Enlace para tus alumnos</h3><p>Las solicitudes completadas desde este enlace quedan asociadas únicamente a tu colegio.</p><div class="share-row"><input id="school-link" readonly value="${esc(matchingUrl)}"><button class="btn" id="copy-link" type="button">Copiar enlace</button></div></section>` : ''}
     <section class="manifest"><div class="passengers"><div class="manifest-head"><span>${sessions.length} ${sessions.length === 1 ? 'alumno' : 'alumnos'}</span><span>Últimos primero</span></div>

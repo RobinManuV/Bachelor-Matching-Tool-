@@ -26,3 +26,19 @@ test('el servidor local entrega la ilustración de marca como SVG', async () => 
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test('las solicitudes de colegio locales pasan por la Function real', async () => {
+  const server = await start(0);
+  await once(server, 'listening');
+  try {
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    const get = await fetch(`${origin}/api/school/apply`);
+    assert.equal(get.status, 405);
+    const post = await fetch(`${origin}/api/school/apply`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(post.status, 400);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

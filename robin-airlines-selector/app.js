@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 
+const appBaseUrl = new URL('.', document.currentScript?.src || location.href);
 const urlParams = new URLSearchParams(location.search);
 const isFramed = window.parent !== window;
 const isEmbed = urlParams.get('embed') === '1';
@@ -921,7 +922,7 @@ async function requestMatches() {
   const answers = { ...S.answers, g_colegio: S.ticket.colegio };
   const academicSubjects = Array.isArray(answers.asignaturas) ? answers.asignaturas : [];
   delete answers.asignaturas;
-  const response = await fetch('/api/match', {
+  const response = await fetch(new URL('api/match', appBaseUrl), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1009,7 +1010,7 @@ slidesEl.addEventListener('click', async (event) => {
   buttons.forEach((item) => { item.disabled = true; });
   status.textContent = tr('Guardando…');
   try {
-    const response = await fetch('/api/feedback', {
+    const response = await fetch(new URL('api/feedback', appBaseUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

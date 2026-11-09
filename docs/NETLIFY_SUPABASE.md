@@ -75,6 +75,7 @@ node --env-file=.env scripts/deploy-setup.cjs
 Las contraseñas se entregan a Supabase Auth y no se guardan en las tablas públicas del proyecto.
 
 El panel estará en `/admin/` y el formulario público para solicitar acceso de colegio en `/colegios/`.
+En producción se publican bajo `https://project-robin.com/rbmt/` mediante el Worker de Cloudflare descrito en [`infra/cloudflare/README.md`](../infra/cloudflare/README.md). Configura `SITE_URL=https://project-robin.com/rbmt` en Netlify para que los correos de colegios incluyan la URL pública.
 
 ## 6. Comprobar el despliegue
 

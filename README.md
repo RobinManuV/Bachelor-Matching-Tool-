@@ -20,7 +20,7 @@ npm ci
 npm run dev
 ```
 
-Con las claves de Supabase en `.env`, el panel `/admin/` accede a los datos reales. `npm ci` instala la librería de Supabase que usa el panel.
+Con las claves de Supabase en `.env`, el panel `/admin/` accede a los datos reales. `npm ci` instala la librería de Supabase que usa el panel. En producción, la entrada pública es `https://project-robin.com/rbmt/` y el panel está en `https://project-robin.com/rbmt/admin/`.
 
 Sin archivo `.env`, usa el comando anterior `node server.cjs`. Para activar Claude sin `.env`:
 
