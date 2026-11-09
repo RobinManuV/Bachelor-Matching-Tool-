@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-label="Robin con birrete en su monopatín">
+  <g fill="none" stroke="#2D3A64" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- cuerpo -->
+    <path d="M28 132 C60 124 66 84 96 64 C128 44 166 62 166 104 C166 140 140 162 106 162 C76 162 50 150 28 132 Z" fill="#FFFDF5"/>
+    <!-- barriga -->
+    <path d="M100 160 C112 134 138 118 164 116 C160 142 140 160 106 162 Z" fill="#ECB450" stroke="none"/>
+    <!-- ala -->
+    <path d="M70 126 C94 138 120 134 136 118"/>
+    <!-- gafas de sol -->
+    <path d="M84 86 L174 78"/>
+    <path d="M102 86 C102 100 110 106 120 104 C130 102 134 94 132 83 Z" fill="#2D3A64"/>
+    <path d="M142 82 C142 94 148 99 155 97 C162 95 164 88 163 80 Z" fill="#2D3A64"/>
+    <!-- pico -->
+    <path d="M162 94 L190 102 L162 111" fill="#FFFDF5"/>
+    <!-- sonrisa -->
+    <path d="M110 114 C118 121 130 121 138 115"/>
+    <!-- birrete -->
+    <path d="M78 56 L120 40 L164 54 L122 70 Z" fill="#FFFDF5"/>
+    <path d="M96 64 L96 74 C110 80 128 80 142 72 L142 62"/>
+    <path d="M78 56 L74 76"/>
+    <path d="M74 76 L70 86 M74 76 L78 86"/>
+    <!-- patas -->
+    <path d="M98 162 L90 184"/>
+    <path d="M126 160 L132 184"/>
+    <!-- monopatín -->
+    <path d="M30 178 C34 190 44 194 58 194 L164 194 C178 194 188 190 192 178"/>
+    <circle cx="74" cy="206" r="7" fill="#FFFDF5"/>
+    <circle cx="150" cy="206" r="7" fill="#FFFDF5"/>
+  </g>
+</svg>

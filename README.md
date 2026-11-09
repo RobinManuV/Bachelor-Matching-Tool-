@@ -11,7 +11,18 @@ cd "Bachelor Matching Tool"
 node server.cjs
 ```
 
-Abre `http://localhost:3000`. Sin clave de Anthropic, el formulario y el recomendador funcionan con el ranking determinista de respaldo. Para activar Claude:
+Abre `http://localhost:3000`. Sin clave de Anthropic, el formulario y el recomendador funcionan con el ranking determinista de respaldo.
+
+Para desarrollo local con `.env` y reinicio automático al cambiar archivos:
+
+```bash
+npm ci
+npm run dev
+```
+
+Con las claves de Supabase en `.env`, el panel `/admin/` accede a los datos reales. `npm ci` instala la librería de Supabase que usa el panel.
+
+Sin archivo `.env`, usa el comando anterior `node server.cjs`. Para activar Claude sin `.env`:
 
 ```bash
 ANTHROPIC_API_KEY=tu_clave node server.cjs

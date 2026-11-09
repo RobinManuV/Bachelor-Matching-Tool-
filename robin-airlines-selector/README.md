@@ -18,9 +18,9 @@ robin-airlines-selector/
 │   └── img/
 │       ├── avioneta-*.webp          Las 5 vistas de Robin en su avioneta + miniatura
 │       ├── robin-avatar.webp        Cara de Robin (bocadillos y billete)
-│       ├── logo-robin.png           Logotipo ROBIN de la cabecera
-│       ├── logo-r-crema.webp        Logo R (placa de la cabina y franja final)
-│       └── ciudades/*.webp          Fotos de las 9 ciudades (las de la web)
+│       ├── logo-robin.png           Logotipo ROBIN de alta resolución
+│       ├── logo-r-crema.png         Monograma para la placa de cabina y franja final
+│       └── ciudades/*.webp          Imágenes de alta resolución de las 9 ciudades
 ├── robin-airlines-standalone.html   Todo lo anterior en un solo archivo (para enseñarlo)
 └── herramientas/
     └── generar-standalone.py        Regenera el archivo único a partir de los demás
@@ -28,7 +28,8 @@ robin-airlines-selector/
 
 ## Cómo verlo
 
-- Desde la carpeta padre, ejecuta `node server.cjs` y abre `http://localhost:3000`.
+- Desde la carpeta padre, ejecuta `npm run dev` y abre `http://localhost:3000`.
+- El panel de administración está en `http://localhost:3000/admin/` y usa los datos reales configurados en `.env`.
 - La aplicación necesita el servidor del proyecto padre; abrir el HTML con doble clic no permite calcular recomendaciones.
 - Inter e IBM Plex Mono se cargan de Google Fonts (sin conexión se usa la del sistema). D-DIN Exp va incluida.
 

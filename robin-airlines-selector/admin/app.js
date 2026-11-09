@@ -3,57 +3,8 @@
 
 const app = document.querySelector('#app');
 const toast = document.querySelector('#toast');
-const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-const previewRole = isLocal ? new URLSearchParams(location.search).get('preview') : '';
 const SESSION_KEY = 'robin_matching_admin_session';
 const areaNames = { ciencias: 'Ciencias', tecnologia_y_programacion: 'Tecnología', business: 'Business', ciencias_de_la_salud: 'Salud', ingenierias: 'Ingenierías', ciencias_sociales: 'Ciencias sociales', artes: 'Artes' };
-
-const mockRecommendations = [
-  ['tud-aerospace-engineering', 'Aerospace Engineering', 'Delft University of Technology', 'Delft', 94],
-  ['tud-computer-science-and-engineering', 'Computer Science and Engineering', 'Delft University of Technology', 'Delft', 91],
-  ['tue-applied-mathematics', 'Applied Mathematics', 'Eindhoven University of Technology', 'Eindhoven', 88],
-  ['tue-automotive-technology', 'Automotive Technology', 'Eindhoven University of Technology', 'Eindhoven', 86],
-  ['tud-nanobiology', 'Nanobiology', 'Delft University of Technology', 'Delft', 84],
-  ['tue-applied-physics', 'Applied Physics', 'Eindhoven University of Technology', 'Eindhoven', 82],
-  ['tue-biomedical-engineering', 'Biomedical Engineering', 'Eindhoven University of Technology', 'Eindhoven', 80],
-  ['tud-earth-climate-and-technology', 'Earth, Climate and Technology', 'Delft University of Technology', 'Delft', 78],
-  ['tue-architecture-urbanism-and-building-sciences', 'Architecture, Urbanism and Building Sciences', 'Eindhoven University of Technology', 'Eindhoven', 75],
-  ['tue-chemical-engineering-and-chemistry', 'Chemical Engineering and Chemistry', 'Eindhoven University of Technology', 'Eindhoven', 73],
-].map(([program_code, career_name, university, city, compatibility]) => ({ program_code, career_name, university, city, compatibility }));
-
-const mockSession = {
-  id: 'demo-ana', created_at: new Date().toISOString(), first_name: 'Ana', last_name: 'García',
-  email: 'ana.garcia@example.com', phone: '+34 600 123 456', school: 'Colegio Internacional del Norte',
-  origin_city: 'Madrid', origin_country: 'España', selected_area: 'ingenierias', academic_system: 'bachillerato_espanol',
-  academic_subjects: [{ name: 'Matemáticas II', level: '' }, { name: 'Física', level: '' }, { name: 'Dibujo Técnico II', level: '' }],
-  questionnaire: { blocks: [
-    { title: 'Información general', items: [
-      { q: '¿Cuál es tu nota media del año pasado?', a: '8.5/10' },
-      { q: '¿Qué asignaturas te gustan MÁS?', a: ['Matemáticas', 'Física', 'Tecnología'] },
-      { q: '¿Cómo prefieres aprender?', a: '3/10 (Práctica ↔ Teoría)' },
-      { q: '¿Qué valoras MÁS en una carrera universitaria?', a: ['Innovación', 'Salidas profesionales', 'Ambiente internacional'] },
-    ] },
-    { title: 'Ingenierías', items: [
-      { q: '¿Qué tipo de problemas disfrutas resolver?', a: 'Diseñar objetos y sistemas que puedan probarse en el mundo real.' },
-      { q: '¿Qué ingenierías se acercan más a tus intereses?', a: ['Aeroespacial', 'Mecánica', 'Robótica'] },
-      { q: '¿Qué disfrutas más?', a: 'Diseñar' },
-    ] },
-    { title: 'Perfil vocacional', items: [
-      { q: '¿Qué tipo de trabajo te imaginas teniendo en 10 años?', a: 'Diseñando sistemas aeroespaciales en un equipo internacional.' },
-      { q: '¿Qué es lo más importante para ti?', a: 'Pasión' },
-    ] },
-  ] },
-  recommendation_source: 'fallback', recommendation_model: null, recommendations: mockRecommendations, locked_recommendation_count: 0,
-  recommendation_feedback: [
-    { program_code: 'tud-aerospace-engineering', decision: 'approved' },
-    { program_code: 'tud-computer-science-and-engineering', decision: 'rejected' },
-  ],
-};
-
-const mockApplications = [
-  { id: 'app-1', created_at: new Date(Date.now() - 86400000).toISOString(), school_name: 'Colegio Internacional del Norte', contact_name: 'Lucía Santos', job_title: 'Orientadora académica', corporate_email: 'lucia@colegionorte.es', status: 'pending' },
-  { id: 'app-2', created_at: new Date(Date.now() - 5 * 86400000).toISOString(), school_name: 'Liceo Europeo', contact_name: 'Pablo Ruiz', job_title: 'Director de Bachillerato', corporate_email: 'pablo@liceoeuropeo.es', status: 'approved' },
-];
 
 let state = { profile: null, sessions: [], applications: [], selected: null, view: 'students', query: '', session: null };
 
@@ -66,17 +17,6 @@ const schoolOf = (profile) => Array.isArray(profile?.schools) ? profile.schools[
 function showToast(message) {
   toast.textContent = message; toast.classList.add('show');
   clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove('show'), 3200);
-}
-
-function previewData(role) {
-  const robin = role !== 'school';
-  state.profile = robin
-    ? { user_id: 'preview-robin', email: 'manuel@project-robin.com', full_name: 'Manuel', role: 'robin', school_id: null, schools: null }
-    : { user_id: 'preview-school', email: 'lucia@colegionorte.es', full_name: 'Lucía Santos', role: 'school', school_id: 'school-demo', schools: { name: 'Colegio Internacional del Norte', access_code: 'colegio-internacional-del-norte-demo' } };
-  state.sessions = [{ ...mockSession, recommendations: robin ? mockRecommendations : mockRecommendations.slice(0, 3), locked_recommendation_count: robin ? 0 : 7 }];
-  state.applications = robin ? structuredClone(mockApplications) : [];
-  state.selected = state.sessions[0].id;
-  state.view = robin && new URLSearchParams(location.search).get('view') === 'applications' ? 'applications' : 'students';
 }
 
 async function rawApi(route, options = {}) {
@@ -99,16 +39,26 @@ async function api(route, options) {
 }
 
 function renderLogin(error = '') {
-  app.innerHTML = `<main class="login-page">
-    <section class="login-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"><div><h1>Matching de carreras</h1><p>Respuestas, perfiles y destinos académicos en un único manifiesto.</p></div></section>
-    <section class="login-panel"><div class="login-language" data-language-switcher></div><h2>Acceso al panel</h2><p>Administración Robin y colegios asociados.</p>
-      <form class="form" id="login-form">
-        <label class="field"><span>Correo</span><input type="email" name="email" autocomplete="username" required></label>
-        <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
-        <p class="form-error" ${error ? '' : 'hidden'}>${esc(error)}</p><button class="btn orange" type="submit">Entrar</button>
-      </form>
-      ${isLocal ? '<div class="preview-note">Preview local: <a href="?preview=robin">ver como Robin</a> · <a href="?preview=school">ver como colegio</a></div>' : ''}
-    </section></main>`;
+  app.innerHTML = `<main class="robin-login">
+    <img class="robin-login-wordmark" src="../assets/img/logo-robin.png" alt="Robin">
+    <div class="robin-postcard">
+      <section class="robin-postcard-message" aria-labelledby="robin-login-title">
+        <p class="robin-postcard-label">Tu espacio Robin</p>
+        <h1 id="robin-login-title">Matching de carreras.</h1>
+        <p class="robin-postcard-lead">Respuestas, perfiles y destinos académicos en un único lugar.</p>
+        <div class="robin-postcard-feature"><img src="assets/robin-student.svg" alt=""><span><strong>Panel de matching</strong>Accede a tus alumnos y recomendaciones.</span></div>
+      </section>
+      <section class="robin-postcard-address"><div class="login-language" data-language-switcher></div>
+        <div class="robin-postcard-stamp" aria-hidden="true"><img src="assets/robin-student.svg" alt=""><span>52°22′N 4°54′E</span></div>
+        <h2>Acceso al panel</h2>
+        <form class="form" id="login-form">
+          <label class="field"><span>Correo</span><input type="email" name="email" autocomplete="username" required></label>
+          <label class="field"><span>Contraseña</span><input type="password" name="password" autocomplete="current-password" required></label>
+          <p class="form-error" ${error ? '' : 'hidden'} role="alert">${esc(error)}</p><button class="btn" type="submit">Entrar</button>
+        </form>
+      </section>
+    </div>
+  </main>`;
   document.querySelector('#login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true;
     try {
@@ -130,18 +80,16 @@ async function loadProductionData() {
 function renderShell() {
   const robin = state.profile.role === 'robin'; const school = schoolOf(state.profile);
   app.innerHTML = `<div class="shell">
-    <aside class="sidebar"><div class="sidebar-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"></div>
+    <aside class="sidebar"><div class="sidebar-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"><span>Matching de carreras</span></div>
       <div class="identity"><span class="avatar">${esc(initials(state.profile.full_name))}</span><div><strong>${esc(state.profile.full_name)}</strong><small>${robin ? 'Administración Robin' : esc(school?.name || 'Colegio')}</small></div></div>
       <nav class="nav" aria-label="Panel"><button data-view="students">Alumnos</button>${robin ? `<button data-view="applications">Solicitudes <span class="count">${state.applications.filter((x) => x.status === 'pending').length}</span></button>` : ''}</nav>
-      <div class="sidebar-foot">Matching de carreras<br><button id="logout" type="button">Cerrar sesión</button></div>
+      <div class="sidebar-foot"><img src="assets/robin-student.svg" alt=""><strong>Tu espacio Robin</strong><span>Matching de carreras</span><button data-logout type="button">Cerrar sesión</button></div>
     </aside>
     <header class="topbar"><span class="topbar-title">Panel de matching</span>
-      <div class="topbar-user"><div data-language-switcher></div><span>${esc(state.profile.email)}</span><span class="role-chip">${robin ? 'Robin' : 'Colegio'}</span>
-      ${previewRole ? `<div class="preview-switch" aria-label="Cambiar vista de preview"><button data-preview="robin" aria-pressed="${robin}">Robin</button><button data-preview="school" aria-pressed="${!robin}">Colegio</button></div>` : ''}</div>
+      <div class="topbar-user"><div data-language-switcher></div><span>${esc(state.profile.email)}</span><span class="role-chip">${robin ? 'Robin' : 'Colegio'}</span><button class="logout-mobile" data-logout type="button">Salir</button></div>
     </header><main class="main" id="main"></main></div>`;
   document.querySelector('.nav').addEventListener('click', (event) => { const button = event.target.closest('[data-view]'); if (!button) return; state.view = button.dataset.view; renderView(); });
-  document.querySelector('#logout').addEventListener('click', () => { sessionStorage.removeItem(SESSION_KEY); state.session = null; renderLogin(); });
-  document.querySelectorAll('[data-preview]').forEach((button) => button.addEventListener('click', () => { previewData(button.dataset.preview); renderShell(); }));
+  document.querySelectorAll('[data-logout]').forEach((button) => button.addEventListener('click', () => { sessionStorage.removeItem(SESSION_KEY); state.session = null; renderLogin(); }));
   renderView();
 }
 
@@ -196,7 +144,7 @@ function recHtml(item, rank, decision) {
 }
 
 function lockedRecHtml(rank) {
-  return `<button class="rec locked" type="button"><span class="rec-inner"><span class="rec-rank">${rank}</span><span><strong>International programme name</strong><small>University destination · City</small></span><span class="compat">82%</span></span><span class="rec-lock"><span>Solo Robin</span></span></button>`;
+  return `<button class="rec locked" type="button" aria-label="Recomendación ${rank}, reservada para Robin"><span class="rec-rank">${rank}</span><span><strong>Recomendación reservada</strong><small>Disponible para administradores Robin</small></span><span class="rec-lock">Solo Robin</span></button>`;
 }
 
 function renderApplications() {
@@ -209,20 +157,15 @@ function renderApplications() {
     if (!confirm(action === 'approve' ? '¿Aprobar este colegio y crear sus credenciales?' : '¿Denegar esta solicitud?')) return;
     button.disabled = true;
     try {
-      if (previewRole) {
-        const item = state.applications.find((entry) => entry.id === button.dataset.id); item.status = action === 'approve' ? 'approved' : 'denied';
-      } else {
-        await api('applications/decision', { method: 'POST', body: { id: button.dataset.id, action } });
-        const item = state.applications.find((entry) => entry.id === button.dataset.id);
-        if (item) item.status = action === 'approve' ? 'approved' : 'denied';
-      }
+      await api('applications/decision', { method: 'POST', body: { id: button.dataset.id, action } });
+      const item = state.applications.find((entry) => entry.id === button.dataset.id);
+      if (item) item.status = action === 'approve' ? 'approved' : 'denied';
       showToast(action === 'approve' ? 'Colegio aprobado y credenciales enviadas.' : 'Solicitud denegada.'); renderShell(); state.view = 'applications'; renderView();
     } catch (error) { showToast(error.message); button.disabled = false; }
   });
 }
 
 async function boot() {
-  if (previewRole === 'robin' || previewRole === 'school') { previewData(previewRole); renderShell(); return; }
   try { state.session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (_) { state.session = null; }
   if (!state.session) { renderLogin(); return; }
   try {

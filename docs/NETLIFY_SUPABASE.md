@@ -92,8 +92,11 @@ Si faltan las variables de Supabase en Netlify, la aplicación devuelve un error
 Copia `.env.example` como `.env`, rellena las credenciales y ejecuta:
 
 ```bash
-node --env-file=.env server.cjs
+npm ci
+npm run dev
 ```
+
+El panel de administración está en `http://localhost:3000/admin/` y usa las mismas tablas y cuentas de Supabase que el despliegue.
 
 Sin credenciales, el servidor local permite probar el recomendador, pero no guarda las solicitudes. Esta excepción existe solo para desarrollo; en Netlify la base de datos es obligatoria.
 

@@ -3,7 +3,9 @@
 Uso (desde la carpeta robin-airlines-selector):
     python3 herramientas/generar-standalone.py
 
-Sirve para enseñar el mockup sin servidor (se abre con doble clic) o subirlo como página suelta.
+Sirve para distribuir la interfaz en un solo archivo. Las recomendaciones y la
+persistencia de datos necesitan las APIs reales; para usarlas en local, ejecuta
+`npm run dev` y abre la versión normal de index.html.
 Para integrar en la web o en el portal, usa index.html + styles.css + app.js + assets/.
 """
 import base64

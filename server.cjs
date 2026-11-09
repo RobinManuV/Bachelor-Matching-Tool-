@@ -205,6 +205,18 @@ function validateFeedback(value) {
 
 async function handler(req, res) {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/.netlify/functions/admin') {
+    const { handler: adminHandler } = require('./netlify/functions/admin.cjs');
+    const result = await adminHandler({
+      httpMethod: req.method,
+      headers: req.headers,
+      queryStringParameters: Object.fromEntries(url.searchParams),
+      body: req.method === 'POST' ? JSON.stringify(await readBody(req)) : null,
+    });
+    res.writeHead(result.statusCode, result.headers);
+    res.end(result.body);
+    return;
+  }
   if (req.method === 'GET' && url.pathname === '/api/config') {
     return send(res, 200, { ...questionnaireData, academicSystems: ACADEMIC_SYSTEMS, areaLabels: AREA_LABELS, careerCount: CAREERS.length });
   }
@@ -239,7 +251,7 @@ async function handler(req, res) {
     const extension = path.extname(filename).toLowerCase();
     const types = {
       '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-      '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2',
+      '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2',
     };
     res.writeHead(200, { 'Content-Type': types[extension] || 'application/octet-stream' });
     res.end(content);
