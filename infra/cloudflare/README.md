@@ -4,8 +4,8 @@ El sitio sigue desplegado en `https://rbmt.netlify.app`. El Worker [`rbmt-proxy.
 
 En la zona `project-robin.com` de Cloudflare:
 
-1. Crea un Worker independiente llamado `project-robin-rbmt` con el contenido exacto de `rbmt-proxy.mjs` y publícalo.
-2. Añade la ruta `project-robin.com/rbmt*` a ese Worker. El código solo intercepta `/rbmt` y `/rbmt/*`; las demás rutas continúan hacia el origen normal.
+1. Autoriza Wrangler con la cuenta que administra la zona y ejecuta `npx wrangler deploy --config infra/cloudflare/wrangler.jsonc` desde la raíz del repositorio. Esto publica el Worker `project-robin-rbmt` y la ruta `project-robin.com/rbmt*` definida en la configuración.
+2. El código solo intercepta `/rbmt` y `/rbmt/*`; las demás rutas continúan hacia el origen normal.
 3. Configura `SITE_URL=https://project-robin.com/rbmt` en el sitio `rbmt` de Netlify y despliega de nuevo.
 
 El Worker redirige `/rbmt` y `/rbmt/admin` a sus versiones con barra final para que los recursos relativos carguen desde el directorio correcto. Las redirecciones internas de Netlify también se mantienen bajo `/rbmt`.

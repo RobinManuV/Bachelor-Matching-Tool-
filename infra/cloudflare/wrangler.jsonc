@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "project-robin-rbmt",
+  "main": "./rbmt-proxy.mjs",
+  "compatibility_date": "2026-11-09",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "project-robin.com/rbmt*",
+      "zone_name": "project-robin.com"
+    }
+  ]
+}
