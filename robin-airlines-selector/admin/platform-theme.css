@@ -23,7 +23,7 @@ body { background: var(--cream); }
   background: var(--cream);
 }
 .robin-login-wordmark {
-  justify-self: start;
+  justify-self: center;
   width: min(62rem, 100%);
   max-width: 62rem;
   height: 44px;
