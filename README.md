@@ -67,6 +67,19 @@ El campo de sistema y asignaturas se recoge y valida como en el portal. El recom
 
 Para ejecutar las comprobaciones: `npm test`.
 
+## Leads del recomendador
+
+Cada envío queda en `matching_sessions` de RBMT. Si su correo aún no existe en el CRM de Project Robin, se crea un lead con origen «Página web» y campaña «Recomendador». La ficha del lead consulta en RBMT el número de envíos y enlaza el último test; repetir el formulario no modifica el lead existente.
+
+Para revisar o repetir la importación histórica desde este repositorio, con `.env` configurado y la sesión de Netlify iniciada:
+
+```bash
+npm run backfill:crm             # simulación sin escrituras
+npm run backfill:crm -- --apply  # crea solo los correos ausentes
+```
+
+El script toma el envío más reciente de cada correo, conserva su fecha original y comprueba tanto `crm_leads` como `crm_future_leads`. Los formularios anteriores a la pregunta del curso quedan sin ese dato.
+
 ## Netlify y Supabase
 
 La configuración de Netlify ya forma parte del repositorio. Para crear la base de datos y añadir los secretos necesarios, sigue [`docs/NETLIFY_SUPABASE.md`](docs/NETLIFY_SUPABASE.md).

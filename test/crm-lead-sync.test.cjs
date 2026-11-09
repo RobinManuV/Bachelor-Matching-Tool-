@@ -9,7 +9,7 @@ const lead = {
 
 test('envía el billete al CRM como lead web de la campaña Recomendador', async () => {
   let request;
-  const result = await syncRecommenderLead({ lead, sessionId: 'matching-1', area: 'ingenierias' }, {
+  const result = await syncRecommenderLead({ lead, sessionId: 'matching-1', area: 'ingenierias', createdAt: '2026-10-12T10:00:00.000Z' }, {
     secret: 'test-secret',
     fetchImpl: async (url, options) => {
       request = { url, options };
@@ -24,6 +24,7 @@ test('envía el billete al CRM como lead web de la campaña Recomendador', async
   assert.equal(body.campaign, 'Recomendador');
   assert.equal(body.createOnlyEmail, true);
   assert.equal(body.submissionId, 'matching-1');
+  assert.equal(body.createdAt, '2026-10-12T10:00:00.000Z');
   assert.equal(body.fields.name, 'Ana García');
   assert.equal(body.fields.email, 'ana@example.com');
   assert.equal(body.fields.phone, '+34 600 000 000');
