@@ -604,6 +604,11 @@ html.is-embed .toast{position:absolute;top:16px;bottom:auto}
               <input type="text" id="t-colegio" name="colegio" autocomplete="organization" maxlength="120" placeholder="Nombre del colegio">
               <p class="err">Escribe el nombre de tu colegio o centro.</p>
             </div>
+            <div class="field" data-f="curso">
+              <label for="t-curso">¿En qué curso estás?</label>
+              <input type="text" id="t-curso" name="curso" maxlength="100" placeholder="2.º de Bachillerato / IB Year 2">
+              <p class="err">Indica el curso que estás haciendo.</p>
+            </div>
             <div class="row2">
               <div class="field" data-f="ciudad">
                 <label for="t-ciudad">Ciudad de origen</label>
@@ -867,14 +872,17 @@ const rows = [
   ['Correo electrónico', 'Email address', 'Endereço de email'],
   ['Teléfono móvil', 'Mobile phone', 'Telemóvel'],
   ['Colegio o centro educativo actual', 'Current school or education centre', 'Escola ou estabelecimento de ensino atual'],
+  ['¿En qué curso estás?', 'What year are you in?', 'Em que ano estás?'],
   ['Ciudad de origen', 'Home city', 'Cidade de origem'],
   ['País de origen', 'Country of origin', 'País de origem'],
   ['Nombre del colegio', 'School name', 'Nome da escola'],
+  ['2.º de Bachillerato / IB Year 2', 'Year 13 / IB Year 2', '12.º ano / IB Year 2'],
   ['Escribe tu nombre.', 'Enter your first name.', 'Indica o teu nome.'],
   ['Escribe tus apellidos.', 'Enter your surname.', 'Indica o teu apelido.'],
   ['Escribe un correo válido, por ejemplo nombre@gmail.com.', 'Enter a valid email, for example name@gmail.com.', 'Indica um email válido, por exemplo nome@gmail.com.'],
   ['Escribe un teléfono con al menos 9 cifras.', 'Enter a phone number with at least 9 digits.', 'Indica um número de telefone com pelo menos 9 algarismos.'],
   ['Escribe el nombre de tu colegio o centro.', 'Enter the name of your school or centre.', 'Indica o nome da tua escola ou estabelecimento.'],
+  ['Indica el curso que estás haciendo.', 'Enter your current school year.', 'Indica o ano que estás a frequentar.'],
   ['Escribe tu ciudad.', 'Enter your city.', 'Indica a tua cidade.'],
   ['Escribe tu país.', 'Enter your country.', 'Indica o teu país.'],
   ['Acepto que Project Robin trate mis datos para enviarme los resultados y contactarme sobre ellos.', 'I agree that Project Robin may process my data to send me the results and contact me about them.', 'Aceito que o Project Robin trate os meus dados para me enviar os resultados e contactar-me sobre os mesmos.'],
@@ -1692,7 +1700,7 @@ function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { 
 
 /* ================= Estado ================= */
 function fresh() {
-  return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', ciudad: '', pais: '', consent: false },
+  return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', curso: '', ciudad: '', pais: '', consent: false },
     area: '', answers: {}, b: 0, q: -1, results: null, sessionId: '', feedback: {}, slide: 0, noticeShown: false, zoomShown: false };
 }
 let S = fresh();
@@ -1721,7 +1729,7 @@ function show(phase) {
 }
 
 /* ================= Check-in ================= */
-const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'ciudad', 'pais'];
+const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'curso', 'ciudad', 'pais'];
 const F = {}; KEYS.forEach((k) => { F[k] = $('#t-' + k); }); F.consent = $('#t-consent');
 const now = new Date();
 const boardTime = new Date(now.getTime() + 15 * 60000);
@@ -1767,6 +1775,7 @@ function ticketProblems() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t.email)) bad.push('email');
   if (t.telefono.replace(/\D/g, '').length < 9) bad.push('telefono');
   if (t.colegio.length < 2) bad.push('colegio');
+  if (t.curso.length < 2) bad.push('curso');
   if (t.ciudad.length < 2) bad.push('ciudad');
   if (t.pais.length < 2) bad.push('pais');
   if (!t.consent) bad.push('consent');

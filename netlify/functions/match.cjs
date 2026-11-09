@@ -1,6 +1,7 @@
 const { loadData, buildAirlinesUser, validateFeedback } = require('../../server.cjs');
 const { generateSuggestions } = require('../../lib/career-suggestions');
 const { saveMatchSession } = require('../../lib/match-storage');
+const { syncRecommenderLead } = require('../../lib/crm-lead-sync');
 const { loadFeedbackHistory } = require('../../lib/recommendation-feedback');
 
 let dataPromise;
@@ -31,6 +32,7 @@ exports.handler = async (event) => {
     const history = await loadFeedbackHistory(user.intereses[0]);
     const suggestions = await generateSuggestions(user, validateFeedback(payload.feedback), history);
     const storage = await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code });
+    await syncRecommenderLead({ lead: payload.lead, sessionId: storage.id, area: user.intereses[0] });
     return json(200, { suggestions, storage });
   } catch (error) {
     console.error('match function:', error.message);

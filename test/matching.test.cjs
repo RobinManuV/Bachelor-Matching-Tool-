@@ -205,7 +205,7 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
     const result = await saveMatchSession({
       lead: {
         nombre: 'Ana', apellidos: 'García', email: 'ANA@example.com', telefono: '+34 600 000 000',
-        colegio: 'Colegio Robin', ciudad: 'Madrid', pais: 'España', consent: true,
+        colegio: 'Colegio Robin', curso: '2º de Bachillerato', ciudad: 'Madrid', pais: 'España', consent: true,
       },
       user: {
         intereses: ['ingenierias'], academic_system: 'bachillerato_espanol',
@@ -218,6 +218,7 @@ test('la persistencia valida el consentimiento y escribe en Supabase sin exponer
     assert.equal(request.options.headers.apikey, 'sb_secret_prueba');
     assert.equal(request.options.headers.authorization, undefined);
     assert.equal(JSON.parse(request.options.body).email, 'ana@example.com');
+    assert.equal(JSON.parse(request.options.body).questionnaire.course, '2º de Bachillerato');
   } finally {
     global.fetch = previousFetch;
     if (previousUrl === undefined) delete process.env.SUPABASE_URL;

@@ -77,7 +77,8 @@ function renderLogin(error = '') {
 
 async function loadProductionData() {
   const sessions = await api('sessions'); state.sessions = sessions.sessions || [];
-  state.selected = state.sessions[0]?.id || null;
+  const linkedSession = new URLSearchParams(window.location.search).get('session');
+  state.selected = state.sessions.find((entry) => entry.id === linkedSession)?.id || state.sessions[0]?.id || null;
   if (state.profile.role === 'robin') { const applications = await api('applications'); state.applications = applications.applications || []; }
 }
 
@@ -118,7 +119,7 @@ function renderStudents() {
       <div id="passenger-list">${sessions.length ? sessions.map((session) => `<button class="passenger ${session.id === state.selected ? 'active' : ''}" data-session="${esc(session.id)}"><span class="avatar">${esc(initials(session.first_name, session.last_name))}</span><span><strong>${esc(session.first_name)} ${esc(session.last_name)}</strong><small>${esc(session.school)}</small></span><time>${esc(formatDate(session.created_at))}</time></button>`).join('') : '<div class="empty">Todavía no hay alumnos asociados.</div>'}</div></div>
       <article class="dossier" id="dossier">${selected ? dossierHtml(selected) : '<div class="empty">Selecciona un alumno para abrir su expediente.</div>'}</article></section></div>`;
   document.querySelector('#search').addEventListener('input', (event) => { state.query = event.target.value; renderStudents(); const search = document.querySelector('#search'); search.focus(); search.setSelectionRange(search.value.length, search.value.length); });
-  document.querySelector('#passenger-list').addEventListener('click', (event) => { const button = event.target.closest('[data-session]'); if (!button) return; state.selected = button.dataset.session; renderStudents(); });
+  document.querySelector('#passenger-list').addEventListener('click', (event) => { const button = event.target.closest('[data-session]'); if (!button) return; state.selected = button.dataset.session; window.history.replaceState(null, '', `?session=${encodeURIComponent(state.selected)}`); renderStudents(); });
   document.querySelector('#dossier')?.addEventListener('click', (event) => { if (event.target.closest('.locked')) showToast('Este contenido solo está disponible para administradores Robin.'); });
   document.querySelector('#copy-link')?.addEventListener('click', async () => { await navigator.clipboard.writeText(matchingUrl); showToast('Enlace copiado.'); });
 }

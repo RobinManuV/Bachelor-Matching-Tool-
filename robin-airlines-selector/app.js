@@ -227,7 +227,7 @@ function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { 
 
 /* ================= Estado ================= */
 function fresh() {
-  return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', ciudad: '', pais: '', consent: false },
+  return { phase: 'checkin', ticket: { nombre: '', apellidos: '', email: '', telefono: '', colegio: '', curso: '', ciudad: '', pais: '', consent: false },
     area: '', answers: {}, b: 0, q: -1, results: null, sessionId: '', feedback: {}, slide: 0, noticeShown: false, zoomShown: false };
 }
 let S = fresh();
@@ -256,7 +256,7 @@ function show(phase) {
 }
 
 /* ================= Check-in ================= */
-const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'ciudad', 'pais'];
+const KEYS = ['nombre', 'apellidos', 'email', 'telefono', 'colegio', 'curso', 'ciudad', 'pais'];
 const F = {}; KEYS.forEach((k) => { F[k] = $('#t-' + k); }); F.consent = $('#t-consent');
 const now = new Date();
 const boardTime = new Date(now.getTime() + 15 * 60000);
@@ -302,6 +302,7 @@ function ticketProblems() {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t.email)) bad.push('email');
   if (t.telefono.replace(/\D/g, '').length < 9) bad.push('telefono');
   if (t.colegio.length < 2) bad.push('colegio');
+  if (t.curso.length < 2) bad.push('curso');
   if (t.ciudad.length < 2) bad.push('ciudad');
   if (t.pais.length < 2) bad.push('pais');
   if (!t.consent) bad.push('consent');

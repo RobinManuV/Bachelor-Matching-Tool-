@@ -24,3 +24,9 @@
   to = "/.netlify/functions/feedback"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/internal/recommender-sessions"
+  to = "/.netlify/functions/recommender-sessions"
+  status = 200
+  force = true

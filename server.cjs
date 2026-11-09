@@ -4,6 +4,7 @@ const path = require('node:path');
 const { generateSuggestions } = require('./lib/career-suggestions');
 const { findCareer, CAREERS } = require('./lib/careers-recommender');
 const { saveMatchSession } = require('./lib/match-storage');
+const { syncRecommenderLead } = require('./lib/crm-lead-sync');
 const { saveRecommendationFeedback, loadFeedbackHistory } = require('./lib/recommendation-feedback');
 const { ACADEMIC_SYSTEMS, sanitizeAcademicProfile } = require('./src/academic-systems.cjs');
 
@@ -240,6 +241,9 @@ async function handler(req, res) {
       const storage = payload.experience === 'robin-airlines'
         ? await saveMatchSession({ lead: payload.lead, user, suggestions, schoolCode: payload.school_code })
         : { saved: false, reason: 'legacy_experience' };
+      if (payload.experience === 'robin-airlines') {
+        await syncRecommenderLead({ lead: payload.lead, sessionId: storage.id, area: user.intereses[0] });
+      }
       return send(res, 200, { suggestions, storage });
     } catch (error) {
       return send(res, 400, { error: error.message });

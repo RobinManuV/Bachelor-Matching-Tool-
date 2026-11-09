@@ -31,8 +31,8 @@ js = inline_assets((ROOT / 'app.js').read_text(encoding='utf-8'))
 i18n = (ROOT / 'i18n.js').read_text(encoding='utf-8')
 
 html = html.replace('<link rel="stylesheet" href="styles.css">', f'<style>\n{css}</style>')
-html = html.replace('<script src="i18n.js"></script>', f'<script>\n{i18n}</script>')
-html = html.replace('<script src="app.js"></script>', f'<script>\n{js}</script>')
+html = re.sub(r'<script src="i18n\.js(?:\?[^\"]*)?"></script>', lambda _: f'<script>\n{i18n}</script>', html)
+html = re.sub(r'<script src="app\.js(?:\?[^\"]*)?"></script>', lambda _: f'<script>\n{js}</script>', html)
 html = inline_assets(html)
 assert 'assets/' not in html, 'quedan rutas sin incrustar'
 
