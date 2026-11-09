@@ -5,12 +5,12 @@ function json(statusCode, value) {
   return { statusCode, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, body: JSON.stringify(value) };
 }
 
-async function listSessions(email) {
-  const { data, count, error } = await getAdminClient().from('matching_sessions')
-    .select('id,created_at', { count: 'exact' })
+async function listSessions(email, client = getAdminClient()) {
+  const { data, count, error } = await client.from('matching_sessions')
+    .select('id,created_at,first_name,last_name,school,origin_city,origin_country,selected_area,academic_system,academic_subjects,questionnaire,recommendations', { count: 'exact' })
     .eq('email', email)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(1);
   if (error) throw error;
   return { count: count || 0, sessions: data || [] };
 }
@@ -35,4 +35,5 @@ function createHandler({ secret = process.env.ROBIN_CRM_LEAD_SECRET, listSession
 }
 
 exports.createHandler = createHandler;
+exports.listSessions = listSessions;
 exports.handler = createHandler();
