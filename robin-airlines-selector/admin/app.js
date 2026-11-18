@@ -10,27 +10,98 @@ const areaNames = { ciencias: 'Ciencias', tecnologia_y_programacion: 'Tecnologí
 
 let state = { profile: null, sessions: [], applications: [], selected: null, view: 'students', query: '', session: null };
 let tourStep = 0;
+let tourDemoSelectedId = 'tutorial-demo-1';
 const tourCopy = {
   es: [
     ['Comparte el enlace de tu colegio', 'Envíalo a tus alumnos. Cada respuesta completada desde este enlace se asociará a tu colegio.'],
-    ['Sigue sus vuelos', 'Aquí aparecerán los alumnos que terminen el cuestionario. Elige un nombre para abrir su expediente.'],
-    ['Prepara una conversación mejor', 'Consulta sus respuestas y las diez recomendaciones. El alumno ve sus tres opciones principales.'],
+    ['Sigue sus vuelos', 'Estos dos alumnos son ficticios. Elige uno abajo para ver cómo se abre su expediente.'],
+    ['Prepara una conversación mejor', 'Compara sus respuestas y diez recomendaciones ficticias. Los alumnos reales verán sus tres opciones principales.'],
   ],
   en: [
     ['Share your school link', 'Send it to your students. Every completed response from this link will be linked to your school.'],
-    ['Follow their journeys', 'Students who finish the questionnaire will appear here. Select a name to open their profile.'],
-    ['Prepare a better conversation', 'Review their answers and all ten recommendations. The student sees their top three options.'],
+    ['Follow their journeys', 'These two students are fictional. Choose one below to see how their profile opens.'],
+    ['Prepare a better conversation', 'Compare their answers and ten fictional recommendations. Real students see their top three options.'],
   ],
   'pt-PT': [
     ['Partilha o link da tua escola', 'Envia-o aos teus alunos. Cada resposta concluída através deste link ficará associada à tua escola.'],
-    ['Acompanha os seus percursos', 'Os alunos que terminarem o questionário aparecerão aqui. Seleciona um nome para abrir o seu perfil.'],
-    ['Prepara uma conversa melhor', 'Consulta as respostas e as dez recomendações. O aluno vê as suas três opções principais.'],
+    ['Acompanha os seus percursos', 'Estes dois alunos são fictícios. Escolhe um abaixo para ver como se abre o seu perfil.'],
+    ['Prepara uma conversa melhor', 'Compara as respostas e dez recomendações fictícias. Os alunos reais veem as suas três opções principais.'],
   ],
 };
 const tourActions = {
-  es: { label: 'Primer vuelo por el panel', previous: 'Atrás', next: 'Siguiente', done: 'Terminar', skip: 'Saltar tutorial' },
-  en: { label: 'Your first dashboard tour', previous: 'Back', next: 'Next', done: 'Finish', skip: 'Skip tour' },
-  'pt-PT': { label: 'Primeiro voo pelo painel', previous: 'Voltar', next: 'Seguinte', done: 'Terminar', skip: 'Saltar tutorial' },
+  es: { label: 'Primer vuelo por el panel', previous: 'Atrás', next: 'Siguiente', done: 'Terminar', skip: 'Saltar tutorial', examples: 'Explora los expedientes' },
+  en: { label: 'Your first dashboard tour', previous: 'Back', next: 'Next', done: 'Finish', skip: 'Skip tour', examples: 'Explore the profiles' },
+  'pt-PT': { label: 'Primeiro voo pelo painel', previous: 'Voltar', next: 'Seguinte', done: 'Terminar', skip: 'Saltar tutorial', examples: 'Explora os perfis' },
+};
+const demoProfiles = [
+  { id: 'tutorial-demo-1', first_name: 'Lucía', last_name: 'Santos', origin_city: 'Lisboa', origin_country: 'Portugal', selected_area: 'ciencias' },
+  { id: 'tutorial-demo-2', first_name: 'Mateo', last_name: 'Costa', origin_city: 'Porto', origin_country: 'Portugal', selected_area: 'artes' },
+];
+// These programmes and universities are copied from the recommender's careers-data.json catalogue.
+// The student answers, rankings and compatibility scores remain fictional tutorial examples.
+const demoPrograms = [
+  [
+    ['wur-biotechnology', 'Biotechnology', 'Wageningen University & Research', 'Wageningen'],
+    ['uva-biomedical-sciences', 'Biomedical Sciences', 'University of Amsterdam', 'Amsterdam'],
+    ['tud-nanobiology', 'Nanobiology', 'Delft University of Technology', 'Delft'],
+    ['lei-life-science-and-technology', 'Life Science and Technology', 'Leiden University', 'Leiden'],
+    ['lei-bio-pharmaceutical-sciences', 'Bio-Pharmaceutical Sciences', 'Leiden University', 'Leiden'],
+    ['uu-molecular-and-biophysical-life-sciences', 'Molecular and Biophysical Life Sciences', 'Utrecht University', 'Utrecht'],
+    ['wur-molecular-life-sciences', 'Molecular Life Sciences', 'Wageningen University & Research', 'Wageningen'],
+    ['rad-molecular-life-sciences', 'Molecular Life Sciences', 'Radboud University', 'Nijmegen'],
+    ['wur-nutrition-and-health', 'Nutrition and Health', 'Wageningen University & Research', 'Wageningen'],
+    ['maa-biomedical-sciences', 'Biomedical Sciences', 'Maastricht University', 'Maastricht'],
+  ],
+  [
+    ['tue-industrial-design', 'Industrial Design', 'Eindhoven University of Technology', 'Eindhoven'],
+    ['utw-creative-technology', 'Creative Technology', 'University of Twente', 'Enschede'],
+    ['utw-industrial-design-engineering', 'Industrial Design Engineering', 'University of Twente', 'Enschede'],
+    ['uva-media-and-information', 'Media and Information', 'University of Amsterdam', 'Amsterdam'],
+    ['tue-architecture-urbanism-and-building-sciences', 'Architecture, Urbanism and Building Sciences', 'Eindhoven University of Technology', 'Eindhoven'],
+    ['eur-international-bachelor-communication-and-media', 'International Bachelor Communication and Media', 'Erasmus University Rotterdam', 'Rotterdam'],
+    ['til-online-culture-art-media-and-society', 'Online Culture: Art, Media and Society', 'Tilburg University', 'Tilburg'],
+    ['rug-arts-culture-and-media', 'Arts, Culture and Media', 'University of Groningen', 'Groningen'],
+    ['uva-communication-science', 'Communication Science', 'University of Amsterdam', 'Amsterdam'],
+    ['vu-lifestyle-informatics', 'Lifestyle Informatics', 'Vrije Universiteit Amsterdam', 'Amsterdam'],
+  ],
+];
+const demoCopy = {
+  es: {
+    badge: 'EJEMPLO FICTICIO', count: '2 ejemplos ficticios', banner: 'Alumnos, respuestas, orden y porcentajes ficticios. Las carreras y universidades pertenecen al catálogo del recomendador. Solo aparecen durante el tutorial.',
+    block: 'Intereses y futuro',
+    students: [
+      { area: 'Ciencias', system: 'Bachillerato', subjects: ['Biología', 'Matemáticas'],
+        answers: [['¿Qué asignaturas disfrutas más?', 'Biología y Matemáticas'], ['¿Cómo te gusta resolver problemas?', 'Experimentando y analizando datos'], ['¿Qué trabajo imaginas en diez años?', 'Investigar tratamientos médicos'], ['¿Hay algo importante que debamos saber?', 'Me gustaría estudiar fuera y trabajar en un laboratorio.']],
+      },
+      { area: 'Artes', system: 'Bachillerato', subjects: ['Arte', 'Tecnología', 'Matemáticas'],
+        answers: [['¿Qué asignaturas disfrutas más?', 'Arte y Tecnología'], ['¿Qué actividades te interesan?', 'Diseñar aplicaciones y objetos'], ['¿Qué trabajo imaginas en diez años?', 'Diseñar productos digitales'], ['¿Hay algo importante que debamos saber?', 'Quiero combinar creatividad y tecnología.']],
+      },
+    ],
+  },
+  en: {
+    badge: 'FICTIONAL EXAMPLE', count: '2 fictional examples', banner: 'Fictional students, answers, ranking and scores. The programmes and universities are in the recommender catalogue. Shown only during the tour.',
+    block: 'Interests and future',
+    students: [
+      { area: 'Sciences', system: 'Secondary school', subjects: ['Biology', 'Mathematics'],
+        answers: [['Which subjects do you enjoy most?', 'Biology and Mathematics'], ['How do you like to solve problems?', 'By experimenting and analysing data'], ['What job do you imagine having in ten years?', 'Researching medical treatments'], ['Is there anything important we should know?', 'I would like to study abroad and work in a laboratory.']],
+      },
+      { area: 'Arts', system: 'Secondary school', subjects: ['Art', 'Technology', 'Mathematics'],
+        answers: [['Which subjects do you enjoy most?', 'Art and Technology'], ['Which activities interest you?', 'Designing apps and objects'], ['What job do you imagine having in ten years?', 'Designing digital products'], ['Is there anything important we should know?', 'I want to combine creativity and technology.']],
+      },
+    ],
+  },
+  'pt-PT': {
+    badge: 'EXEMPLO FICTÍCIO', count: '2 exemplos fictícios', banner: 'Alunos, respostas, ordem e percentagens fictícios. Os cursos e as universidades fazem parte do catálogo do recomendador. Aparecem apenas durante o tutorial.',
+    block: 'Interesses e futuro',
+    students: [
+      { area: 'Ciências', system: 'Ensino secundário', subjects: ['Biologia', 'Matemática'],
+        answers: [['De que disciplinas gostas mais?', 'Biologia e Matemática'], ['Como gostas de resolver problemas?', 'A experimentar e analisar dados'], ['Que trabalho imaginas ter daqui a dez anos?', 'Investigar tratamentos médicos'], ['Há algo importante que devamos saber?', 'Gostaria de estudar no estrangeiro e trabalhar num laboratório.']],
+      },
+      { area: 'Artes', system: 'Ensino secundário', subjects: ['Arte', 'Tecnologia', 'Matemática'],
+        answers: [['De que disciplinas gostas mais?', 'Arte e Tecnologia'], ['Que atividades te interessam?', 'Desenhar aplicações e objetos'], ['Que trabalho imaginas ter daqui a dez anos?', 'Desenhar produtos digitais'], ['Há algo importante que devamos saber?', 'Quero combinar criatividade e tecnologia.']],
+      },
+    ],
+  },
 };
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -38,6 +109,24 @@ const tr = (value) => window.RobinI18n?.t(value) || value;
 const initials = (first, last = '') => `${String(first || '').charAt(0)}${String(last || '').charAt(0)}`.toUpperCase();
 const formatDate = (value) => new Intl.DateTimeFormat(window.RobinI18n?.getLocale() || 'es', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
 const schoolOf = (profile) => Array.isArray(profile?.schools) ? profile.schools[0] : profile?.schools;
+const tourActive = () => state.profile?.role === 'school' && !state.profile.onboarding_completed_at;
+
+function demoSessions() {
+  const copy = demoCopy[window.RobinI18n?.getLocale()] || demoCopy.es;
+  const school = schoolOf(state.profile)?.name || '';
+  return demoProfiles.map((profile, index) => {
+    const student = copy.students[index];
+    return {
+      ...profile, is_demo: true, area_label: student.area, school,
+      email: `${profile.first_name.toLowerCase()}.tutorial@example.invalid`, phone: '', created_at: new Date().toISOString(),
+      academic_system: student.system, academic_subjects: student.subjects.map((name) => ({ name })),
+      questionnaire: { blocks: [{ title: copy.block, items: student.answers.map(([q, a]) => ({ q, a })) }] },
+      recommendations: demoPrograms[index].map(([program_code, career_name, university, city], rank) => ({
+        program_code, career_name, university, city, compatibility: 94 - rank * 3 - index * 2,
+      })),
+    };
+  });
+}
 
 function showToast(message) {
   toast.textContent = message; toast.classList.add('show');
@@ -92,7 +181,7 @@ function renderLogin(error = '') {
       const form = new FormData(event.currentTarget);
       const data = await rawApi('login', { method: 'POST', body: { email: form.get('email'), password: form.get('password') } });
       state.session = { access_token: data.access_token, refresh_token: data.refresh_token };
-      state.profile = data.profile; tourStep = 0; state.view = 'students'; sessionStorage.setItem(SESSION_KEY, JSON.stringify(state.session));
+      state.profile = data.profile; tourStep = 0; tourDemoSelectedId = 'tutorial-demo-1'; state.view = 'students'; sessionStorage.setItem(SESSION_KEY, JSON.stringify(state.session));
       await loadProductionData(); renderShell();
     } catch (loginError) { renderLogin(loginError.message); }
   });
@@ -118,7 +207,7 @@ function renderShell() {
     </header><main class="main" id="main"></main></div>`;
   document.querySelector('.nav').addEventListener('click', (event) => { const button = event.target.closest('[data-view]'); if (!button) return; state.view = button.dataset.view; renderView(); });
   document.querySelectorAll('[data-logout]').forEach((button) => button.addEventListener('click', () => {
-    sessionStorage.removeItem(SESSION_KEY); state.session = null; state.profile = null; state.view = 'students'; tourStep = 0;
+    sessionStorage.removeItem(SESSION_KEY); state.session = null; state.profile = null; state.view = 'students'; tourStep = 0; tourDemoSelectedId = 'tutorial-demo-1';
     document.querySelector('.tour-backdrop')?.remove(); document.querySelector('.tour-panel')?.remove();
     renderLogin();
   }));
@@ -137,22 +226,26 @@ function filteredSessions() {
 }
 
 function renderStudents() {
-  const main = document.querySelector('#main'); const school = schoolOf(state.profile); const sessions = filteredSessions();
-  if (sessions.length && !sessions.some((entry) => entry.id === state.selected)) state.selected = sessions[0].id;
-  const selected = state.sessions.find((entry) => entry.id === state.selected);
+  const main = document.querySelector('#main'); const school = schoolOf(state.profile);
+  const realSessions = filteredSessions(); const demos = tourActive() ? demoSessions() : [];
+  const sessions = [...demos, ...realSessions];
+  if (realSessions.length && !realSessions.some((entry) => entry.id === state.selected)) state.selected = realSessions[0].id;
+  const selectedId = demos.length ? tourDemoSelectedId : state.selected;
+  const selected = sessions.find((entry) => entry.id === selectedId);
+  const demoLabels = demoCopy[window.RobinI18n?.getLocale()] || demoCopy.es;
   const matchingUrl = school?.access_code ? new URL(`?school=${encodeURIComponent(school.access_code)}`, siteBaseUrl).href : '';
   main.innerHTML = `<header class="page-head"><div><p>${state.profile.role === 'robin' ? 'Todos los vuelos' : esc(school?.name || 'Tu colegio')}</p><h1>Manifiesto de alumnos</h1></div><div class="page-tools"><label><span class="sr">Buscar alumno</span><input class="search" id="search" type="search" placeholder="Buscar nombre, correo o colegio" value="${esc(state.query)}"></label></div></header>
     <div class="content">${matchingUrl ? `<section class="share"><h3>Enlace para tus alumnos</h3><p>Las solicitudes completadas desde este enlace quedan asociadas únicamente a tu colegio.</p><div class="share-row"><input id="school-link" readonly value="${esc(matchingUrl)}"><button class="btn" id="copy-link" type="button">Copiar enlace</button></div></section>` : ''}
-    <section class="manifest"><div class="passengers"><div class="manifest-head"><span>${sessions.length} ${sessions.length === 1 ? 'alumno' : 'alumnos'}</span><span>Últimos primero</span></div>
-      <div id="passenger-list">${sessions.length ? sessions.map((session) => `<button class="passenger ${session.id === state.selected ? 'active' : ''}" data-session="${esc(session.id)}"><span class="avatar">${esc(initials(session.first_name, session.last_name))}</span><span><strong>${esc(session.first_name)} ${esc(session.last_name)}</strong><small>${esc(session.school)}</small></span><time>${esc(formatDate(session.created_at))}</time></button>`).join('') : '<div class="empty">Todavía no hay alumnos asociados.</div>'}</div></div>
+    <section class="manifest"><div class="passengers"><div class="manifest-head"><span>${realSessions.length} ${realSessions.length === 1 ? 'alumno' : 'alumnos'}</span><span>${demos.length ? esc(demoLabels.count) : 'Últimos primero'}</span></div>
+      <div id="passenger-list">${sessions.length ? sessions.map((session) => `<button class="passenger ${session.is_demo ? 'demo' : ''} ${session.id === selectedId ? 'active' : ''}" data-session="${esc(session.id)}" ${session.is_demo ? 'aria-disabled="true" tabindex="-1"' : ''}><span class="avatar">${esc(initials(session.first_name, session.last_name))}</span><span><strong>${esc(session.first_name)} ${esc(session.last_name)}</strong><small>${session.is_demo ? esc(demoLabels.badge) : esc(session.school)}</small></span><time>${session.is_demo ? '' : esc(formatDate(session.created_at))}</time></button>`).join('') : '<div class="empty">Todavía no hay alumnos asociados.</div>'}</div></div>
       <article class="dossier" id="dossier">${selected ? dossierHtml(selected) : '<div class="empty">Selecciona un alumno para abrir su expediente.</div>'}</article></section></div>`;
   document.querySelector('#search').addEventListener('input', (event) => { state.query = event.target.value; renderStudents(); const search = document.querySelector('#search'); search.focus(); search.setSelectionRange(search.value.length, search.value.length); });
-  document.querySelector('#passenger-list').addEventListener('click', (event) => { const button = event.target.closest('[data-session]'); if (!button) return; state.selected = button.dataset.session; window.history.replaceState(null, '', `?session=${encodeURIComponent(state.selected)}`); renderStudents(); });
+  document.querySelector('#passenger-list').addEventListener('click', (event) => { const button = event.target.closest('[data-session]'); if (!button || button.classList.contains('demo')) return; state.selected = button.dataset.session; window.history.replaceState(null, '', `?session=${encodeURIComponent(state.selected)}`); renderStudents(); });
   document.querySelector('#copy-link')?.addEventListener('click', async () => { await navigator.clipboard.writeText(matchingUrl); showToast('Enlace copiado.'); });
 }
 
 function renderTour() {
-  if (state.profile?.role !== 'school' || state.profile.onboarding_completed_at) return;
+  if (!tourActive()) return;
   document.querySelector('.tour-backdrop')?.remove();
   document.querySelector('.tour-panel')?.remove();
   document.querySelectorAll('.tour-focus').forEach((element) => element.classList.remove('tour-focus'));
@@ -177,6 +270,7 @@ function renderTour() {
   panel.setAttribute('aria-labelledby', 'tour-title');
   panel.innerHTML = `<div class="tour-route"><span>ROBIN AIRLINES</span><span>${tourStep + 1} / 3</span></div>
     <h2 id="tour-title">${esc(copy[tourStep][0])}</h2><p>${esc(copy[tourStep][1])}</p>
+    ${tourStep ? `<div class="tour-examples" role="group" aria-label="${esc(actions.examples)}"><span>${esc(actions.examples)}</span><div>${demoProfiles.map((student) => `<button type="button" data-tour-demo="${student.id}" aria-pressed="${student.id === tourDemoSelectedId}">${esc(student.first_name)}</button>`).join('')}</div></div>` : ''}
     <div class="tour-progress" aria-label="${esc(actions.label)}">${copy.map((_, index) => `<span class="${index <= tourStep ? 'done' : ''}"></span>`).join('')}</div>
     <div class="tour-buttons"><button type="button" class="tour-skip">${esc(actions.skip)}</button>
       ${tourStep ? `<button type="button" class="tour-back">${esc(actions.previous)}</button>` : ''}
@@ -187,6 +281,11 @@ function renderTour() {
   panel.querySelector('.tour-next').addEventListener('click', () => {
     if (tourStep === 2) finishTour(); else { tourStep++; renderTour(); }
   });
+  panel.querySelectorAll('[data-tour-demo]').forEach((button) => button.addEventListener('click', () => {
+    tourDemoSelectedId = button.dataset.tourDemo;
+    renderStudents(); renderTour();
+    [...document.querySelectorAll('[data-tour-demo]')].find((item) => item.dataset.tourDemo === tourDemoSelectedId)?.focus();
+  }));
   panel.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { event.preventDefault(); finishTour(); return; }
     if (event.key !== 'Tab') return;
@@ -207,6 +306,7 @@ async function finishTour() {
     document.querySelector('.tour-backdrop')?.remove();
     panel?.remove();
     document.querySelectorAll('.tour-focus').forEach((element) => element.classList.remove('tour-focus'));
+    renderStudents();
     const focusTarget = tourStep === 2 ? document.querySelector('.recommendations, #dossier') : document.querySelector('#school-link');
     if (focusTarget) {
       if (tourStep === 2) focusTarget.tabIndex = -1;
@@ -226,7 +326,8 @@ function valueHtml(value) {
 function dossierHtml(session) {
   const blocks = session.questionnaire?.blocks || []; const recommendations = session.recommendations || [];
   const feedback = new Map((session.recommendation_feedback || []).map((item) => [item.program_code, item.decision]));
-  return `<div class="dossier-top"><div><h2>${esc(session.first_name)} ${esc(session.last_name)}</h2><p>${esc(session.email)} · ${esc(session.phone)}</p></div><span class="score-stamp">${esc(areaNames[session.selected_area] || session.selected_area)}</span></div>
+  const demoLabels = demoCopy[window.RobinI18n?.getLocale()] || demoCopy.es;
+  return `${session.is_demo ? `<div class="demo-banner">${esc(demoLabels.banner)}</div>` : ''}<div class="dossier-top"><div><h2>${esc(session.first_name)} ${esc(session.last_name)}</h2><p>${esc(session.email)}${session.phone ? ` · ${esc(session.phone)}` : ''}</p></div><span class="score-stamp">${esc(session.area_label || areaNames[session.selected_area] || session.selected_area)}</span></div>
     <div class="facts"><div class="fact"><span>Origen</span><strong>${esc(session.origin_city)}, ${esc(tr(session.origin_country))}</strong></div><div class="fact"><span>Colegio</span><strong>${esc(session.school)}</strong></div><div class="fact"><span>Sistema</span><strong>${esc(tr(session.academic_system))}</strong></div><div class="fact"><span>Fecha</span><strong>${esc(formatDate(session.created_at))}</strong></div></div>
     <div class="dossier-body"><section class="answers"><div class="section-title"><h3>Respuestas</h3><span>${blocks.reduce((count, block) => count + (block.items?.length || 0), 0)} registradas</span></div>
       ${blocks.map((block) => `<div class="answer-block"><h4>${esc(block.title)}</h4><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl></div>`).join('')}

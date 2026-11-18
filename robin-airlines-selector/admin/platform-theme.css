@@ -204,6 +204,9 @@ body { background: var(--cream); }
 .passengers { border-right: 1px solid var(--line); }
 .manifest-head { color: var(--ink-600); }
 .passenger.active { background: #fae9c0; }
+.passenger.demo { border-left: 3px solid var(--orange); }
+.passenger.demo small { color: var(--ink-600); font-size: .68rem; font-weight: 700; letter-spacing: .06em; }
+.demo-banner { margin: 1.25rem 1.25rem 0; padding: .75rem 1rem; border: 1px solid var(--orange); border-radius: var(--control-radius); background: #fff6de; color: var(--navy); font: 600 .82rem/1.4 var(--text); }
 .score-stamp { border-color: var(--ink-300); }
 .fact { min-width: 0; }
 .fact strong { font-weight: 600; }
@@ -264,6 +267,12 @@ body { background: var(--cream); }
 .tour-route span:first-child { color: var(--navy); }
 .tour-panel h2 { margin: 1.25rem 0 .65rem; font: 600 2rem/1.05 var(--display); }
 .tour-panel p { margin: 0; color: var(--ink-600); font: 400 .95rem/1.55 var(--text); }
+.tour-examples { margin-top: 1.2rem; }
+.tour-examples > span { display: block; margin-bottom: .5rem; color: var(--ink-600); font: 700 .72rem var(--text); letter-spacing: .07em; text-transform: uppercase; }
+.tour-examples > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.tour-examples button { min-height: 2.5rem; padding: .45rem .7rem; border: 1px solid var(--line); border-radius: var(--control-radius); background: var(--paper); color: var(--navy); font: 600 .86rem var(--text); cursor: pointer; }
+.tour-examples button[aria-pressed="true"] { border-color: var(--navy); background: #fae9c0; }
+.tour-examples button:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
 .tour-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; margin: 1.5rem 0; }
 .tour-progress span { height: .3rem; border-radius: 999px; background: var(--line); }
 .tour-progress span.done { background: var(--orange); }
