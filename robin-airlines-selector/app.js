@@ -3,6 +3,7 @@
 
 const appBaseUrl = new URL('.', document.currentScript?.src || location.href);
 const urlParams = new URLSearchParams(location.search);
+const isSchoolLink = Boolean(urlParams.get('school'));
 const isFramed = window.parent !== window;
 const isEmbed = urlParams.get('embed') === '1';
 if (isFramed) document.documentElement.classList.add('is-iframe');
@@ -635,7 +636,7 @@ function renderStep(dir) {
   if (S.q < 0) { if (dir === 'none') { ++chore; setPose('front', null, true); } else if (dir !== 'takeoff') mvIntro(); }
   else mvQuestion(blk.qs[S.q], dir);
   // A mitad de vuelo (al llegar a la 2.ª escala), aviso de cabina una sola vez
-  if (S.b === 1 && S.q < 0 && !S.noticeShown) setTimeout(() => { if (S.phase === 'vuelo' && S.b === 1 && S.q < 0 && !S.noticeShown) openNotice(); }, 1300);
+  if (!isSchoolLink && S.b === 1 && S.q < 0 && !S.noticeShown) setTimeout(() => { if (S.phase === 'vuelo' && S.b === 1 && S.q < 0 && !S.noticeShown) openNotice(); }, 1300);
   swap(dir, () => {
     if (S.q < 0) return renderIntro(blk, bl);
     const q = blk.qs[S.q];
@@ -861,7 +862,7 @@ function showErr(msg) { const el = $('#q-err'); el.textContent = tr(msg); el.hid
 /* ---- Navegación ---- */
 function next() {
   if (busy) return;
-  if (S.b === 1 && S.q < 0 && !S.noticeShown) { openNotice(); return; }   // el aviso de cabina no se salta
+  if (!isSchoolLink && S.b === 1 && S.q < 0 && !S.noticeShown) { openNotice(); return; }   // el aviso de cabina no se salta en el recorrido público
   const bl = blocks(); const blk = bl[S.b];
   if (blk.key === 'asignaturas' && S.q < 0 && !S.zoomShown) {
     S.zoomShown = true; busy = true;

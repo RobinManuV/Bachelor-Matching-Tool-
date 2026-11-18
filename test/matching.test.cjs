@@ -289,12 +289,12 @@ test('la valoración del alumno se guarda una sola vez por sesión y carrera', a
   }
 });
 
-test('los permisos del colegio entregan solo tres recomendaciones', () => {
+test('el colegio y Robin reciben las diez recomendaciones del expediente', () => {
   const session = { recommendations: Array.from({ length: 10 }, (_, index) => ({ program_code: `career-${index}` })) };
   const schoolView = sessionForRole(session, { role: 'school' });
   const robinView = sessionForRole(session, { role: 'robin' });
-  assert.equal(schoolView.recommendations.length, 3);
-  assert.equal(schoolView.locked_recommendation_count, 7);
+  assert.equal(schoolView.recommendations.length, 10);
+  assert.equal(schoolView.locked_recommendation_count, undefined);
   assert.equal(robinView.recommendations.length, 10);
 });
 

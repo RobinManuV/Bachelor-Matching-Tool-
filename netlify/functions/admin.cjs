@@ -1,6 +1,7 @@
 const { getAdminClient, getPublicClient } = require('../../lib/supabase-clients');
 const { normalizeSchoolName, schoolPassword, schoolAccessCode, sessionForRole, escapeHtml } = require('../../lib/admin-access');
 const { sendEmail } = require('../../lib/email');
+const { schoolApprovalEmail } = require('../../lib/school-approval-email');
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, body: JSON.stringify(body) };
@@ -12,7 +13,7 @@ function fail(status, message) {
 
 async function profileFor(userId) {
   const { data, error } = await getAdminClient().from('admin_profiles')
-    .select('user_id,email,full_name,role,school_id,schools(name,access_code)').eq('user_id', userId).single();
+    .select('user_id,email,full_name,role,school_id,onboarding_completed_at,schools(name,access_code)').eq('user_id', userId).single();
   if (error || !data) fail(403, 'Esta cuenta no tiene acceso al panel');
   return data;
 }
@@ -59,9 +60,20 @@ async function listApplications(profile) {
   return data || [];
 }
 
+async function completeOnboarding(profile) {
+  if (profile.role !== 'school') fail(403, 'Solo los colegios tienen este recorrido');
+  if (profile.onboarding_completed_at) return { onboarding_completed_at: profile.onboarding_completed_at };
+  const completedAt = new Date().toISOString();
+  const { error } = await getAdminClient().from('admin_profiles')
+    .update({ onboarding_completed_at: completedAt }).eq('user_id', profile.user_id);
+  if (error) throw error;
+  return { onboarding_completed_at: completedAt };
+}
+
 async function decideApplication(profile, body, event) {
   if (profile.role !== 'robin') fail(403, 'Solo Robin puede gestionar solicitudes');
   if (!['approve', 'deny'].includes(body.action)) fail(400, 'Decisión no válida');
+  if (body.action === 'approve' && !['es', 'en', 'pt-PT'].includes(body.language || 'es')) fail(400, 'Idioma de correo no válido');
   const supabase = getAdminClient();
   const { data: application, error } = await supabase.from('school_applications').select('*').eq('id', body.id).eq('status', 'pending').single();
   if (error || !application) fail(404, 'La solicitud ya no está pendiente');
@@ -108,11 +120,18 @@ async function decideApplication(profile, body, event) {
   const siteUrl = String(process.env.SITE_URL || event.headers?.origin || '').replace(/\/$/, '');
   const matchingUrl = `${siteUrl}/?school=${encodeURIComponent(school.access_code)}`;
   const panelUrl = `${siteUrl}/admin/`;
+  const welcome = schoolApprovalEmail({
+    contactName: application.contact_name,
+    schoolName: application.school_name,
+    email: application.corporate_email,
+    password,
+    matchingUrl,
+    panelUrl,
+    language: body.language || 'es',
+  });
   const email = await sendEmail({
     to: application.corporate_email,
-    subject: 'Tu acceso al panel de colegios de Project Robin',
-    html: `<h1>Solicitud aprobada</h1><p>Hola ${escapeHtml(application.contact_name)},</p><p>Ya puedes acceder al panel de ${escapeHtml(application.school_name)}.</p><p><strong>Usuario:</strong> ${escapeHtml(application.corporate_email)}<br><strong>Contraseña:</strong> ${escapeHtml(password)}</p><p><a href="${escapeHtml(panelUrl)}">Abrir el panel</a></p><p>Comparte este enlace con tus alumnos para asociarlos al colegio:<br><a href="${escapeHtml(matchingUrl)}">${escapeHtml(matchingUrl)}</a></p>`,
-    text: `Solicitud aprobada\nUsuario: ${application.corporate_email}\nContraseña: ${password}\nPanel: ${panelUrl}\nEnlace para alumnos: ${matchingUrl}`,
+    ...welcome,
   });
   if (!email.sent) {
     await supabase.from('school_applications').update({ status: 'pending', reviewed_at: null, reviewed_by: null, school_id: null }).eq('id', application.id);
@@ -133,6 +152,7 @@ exports.handler = async (event) => {
     if (event.httpMethod === 'GET' && route === 'me') return json(200, { profile: context.profile });
     if (event.httpMethod === 'GET' && route === 'sessions') return json(200, { sessions: await listSessions(context.profile) });
     if (event.httpMethod === 'GET' && route === 'applications') return json(200, { applications: await listApplications(context.profile) });
+    if (event.httpMethod === 'POST' && route === 'onboarding/complete') return json(200, await completeOnboarding(context.profile));
     if (event.httpMethod === 'POST' && route === 'applications/decision') return json(200, await decideApplication(context.profile, body, event));
     return json(404, { error: 'Ruta no encontrada' });
   } catch (error) {

@@ -427,7 +427,7 @@ const rows = [
   ['Colegios asociados', 'Partner schools', 'Escolas parceiras'],
   ['Orientación universitaria internacional', 'International university guidance', 'Orientação universitária internacional'],
   ['Un primer rumbo para cada alumno', 'A first direction for every student', 'Um primeiro rumo para cada aluno'],
-  ['Solicita acceso al panel de colegios. Podrás consultar las respuestas de tus alumnos y sus tres recomendaciones principales desde un único manifiesto.', 'Request access to the school dashboard. You will be able to view your students’ answers and their top three recommendations in one manifest.', 'Solicita acesso ao painel das escolas. Poderás consultar as respostas dos teus alunos e as três principais recomendações num único manifesto.'],
+  ['Solicita acceso al panel de colegios. Podrás consultar las respuestas de tus alumnos y sus diez recomendaciones desde un único manifiesto.', 'Request access to the school dashboard. You will be able to view your students’ answers and all ten recommendations in one manifest.', 'Solicita acesso ao painel das escolas. Poderás consultar as respostas dos teus alunos e as dez recomendações num único manifesto.'],
   ['Envía los datos del colegio.', 'Send the school details.', 'Envia os dados da escola.'],
   ['El equipo Robin revisa la solicitud.', 'The Robin team reviews the request.', 'A equipa Robin analisa o pedido.'],
   ['Recibe el acceso y el enlace para tus alumnos.', 'Receive access and the link for your students.', 'Recebe o acesso e a ligação para os teus alunos.'],

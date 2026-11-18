@@ -80,8 +80,12 @@ create table if not exists public.admin_profiles (
   full_name text not null,
   role text not null check (role in ('robin', 'school')),
   school_id uuid references public.schools(id) on delete restrict,
+  onboarding_completed_at timestamptz,
   check ((role = 'robin' and school_id is null) or (role = 'school' and school_id is not null))
 );
+
+alter table public.admin_profiles
+  add column if not exists onboarding_completed_at timestamptz;
 
 create index if not exists matching_sessions_created_at_idx
   on public.matching_sessions (created_at desc);
