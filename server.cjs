@@ -6,7 +6,8 @@ const { findCareer, CAREERS } = require('./lib/careers-recommender');
 const { saveMatchSession } = require('./lib/match-storage');
 const { syncRecommenderLead } = require('./lib/crm-lead-sync');
 const { saveRecommendationFeedback, loadFeedbackHistory } = require('./lib/recommendation-feedback');
-const { ACADEMIC_SYSTEMS, sanitizeAcademicProfile } = require('./src/academic-systems.cjs');
+const { ACADEMIC_SYSTEMS, academicLevelLabel, sanitizeAcademicProfile, validateAcademicGrade } = require('./src/academic-systems.cjs');
+const { systems: CURRICULA } = require('./robin-airlines-selector/academic-curricula.js');
 
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'robin-airlines-selector');
@@ -111,14 +112,7 @@ function buildUser(payload) {
   return { email, intereses, questionnaire, academic_system: academic.system, academic_subjects: academic.subjects };
 }
 
-const ACADEMIC_SYSTEM_MAP = {
-  'Bachillerato español': 'bachillerato_espanol',
-  'Bachillerato Internacional (IB)': 'ib',
-  'A-Levels (británico)': 'a_levels',
-  'Sistema americano': 'high_school_diploma',
-  'Bac francés': 'baccalaureat_frances',
-  Otro: 'otro',
-};
+const ACADEMIC_SYSTEM_MAP = Object.fromEntries(CURRICULA.map((system) => [system.answer, system.value]));
 
 function buildAirlinesUser(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('Faltan respuestas');
@@ -131,12 +125,23 @@ function buildAirlinesUser(payload) {
   }
 
   const answers = payload.answers && typeof payload.answers === 'object' ? { ...payload.answers } : {};
+  const academicSystem = ACADEMIC_SYSTEM_MAP[answers.g_sistema];
+  const curriculum = CURRICULA.find((system) => system.value === academicSystem);
+  if (!curriculum) throw new Error('Selecciona un sistema educativo válido');
+  const grade = validateAcademicGrade(academicSystem, answers.g_nota);
   const sourceBlocks = [questionnaireData.Q_GENERAL, questionnaireData.Q_AREAS[intereses[0]], questionnaireData.Q_VOCACIONAL];
   const blocks = sourceBlocks.map((block) => ({
     title: block.title,
     items: block.questions.flatMap((def) => {
       let answer = answers[def.id];
       if (answer == null || answer === '' || (Array.isArray(answer) && !answer.length)) return [];
+      if (def.id === 'g_nota') return grade ? [{ q: '¿Cuál es tu resultado académico más reciente?', a: grade.display }] : [];
+      if (def.id === 'g_sistema') return [{ q: def.q, a: curriculum.label }];
+      if (def.id === 'g_fav' || def.id === 'g_menos') {
+        const subjectLabels = new Map(curriculum.subjects.map((subject) => [subject.value, subject.label]));
+        if (!Array.isArray(answer) || answer.some((value) => !subjectLabels.has(value))) throw new Error(`Revisa la respuesta: ${def.q}`);
+        return [{ q: def.q, a: answer.map((value) => subjectLabels.get(value)) }];
+      }
       if (def.type === 'slider') {
         answer = Number(answer);
         if (!Number.isFinite(answer) || answer < def.min || answer > def.max || (answer - def.min) % def.step !== 0) {
@@ -159,15 +164,24 @@ function buildAirlinesUser(payload) {
     }),
   }));
 
+  if (curriculum.tracks.length && !answers.modalidad) throw new Error('Indica el itinerario o modalidad');
   if (answers.modalidad) {
+    const legacySpanishTracks = ['Ciencias – tecnológico', 'Ciencias – biosanitario', 'Humanidades y Ciencias Sociales', 'Artes', 'General'];
+    if (!curriculum.tracks.includes(answers.modalidad) && !(academicSystem === 'bachillerato_espanol' && legacySpanishTracks.includes(answers.modalidad))) {
+      throw new Error('Revisa el itinerario o modalidad');
+    }
     const general = blocks[0];
     const position = Math.min(2, general.items.length);
-    general.items.splice(position, 0, { q: '¿Qué modalidad de bachillerato cursas?', a: String(answers.modalidad).slice(0, 160) });
+    general.items.splice(position, 0, { q: '¿Qué itinerario o modalidad cursas?', a: String(answers.modalidad).slice(0, 160) });
   }
 
-  const academicSystem = ACADEMIC_SYSTEM_MAP[answers.g_sistema];
   const academic = sanitizeAcademicProfile(academicSystem, payload.academic_subjects);
   if (!academic) throw new Error('Revisa el sistema académico y las asignaturas');
+  blocks.push({ title: 'Asignaturas cursadas', items: [
+    { q: 'Sistema educativo', a: curriculum.label },
+    { q: 'Asignaturas de este curso', a: academic.subjects.map((subject) =>
+      `${subject.name}${subject.level ? ` (${academicLevelLabel(academicSystem, subject.level)})` : ''}`) },
+  ] });
 
   return {
     email,
@@ -177,7 +191,8 @@ function buildAirlinesUser(payload) {
       locale,
       blocks,
       signals: {
-        nota_media: answers.g_nota,
+        nota_media: grade?.display || null,
+        nota_media_escala: grade?.scale || null,
         estilo_aprendizaje: answers.g_estilo,
         independencia: answers.g_independencia,
         presupuesto_mensual: answers.g_presupuesto,

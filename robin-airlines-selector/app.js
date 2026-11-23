@@ -70,13 +70,9 @@ const AREAS = [
 ];
 const areaBy = (k) => AREAS.find((a) => a.key === k) || null;
 
-const Q_SUBJECTS = [
-  { label: 'Matemáticas', value: 'matematicas' }, { label: 'Física', value: 'fisica' }, { label: 'Química', value: 'quimica' },
-  { label: 'Biología', value: 'biologia' }, { label: 'Informática / Programación', value: 'informatica' }, { label: 'Economía', value: 'economia' },
-  { label: 'Lengua y Literatura', value: 'lengua' }, { label: 'Historia', value: 'historia' }, { label: 'Geografía', value: 'geografia' },
-  { label: 'Filosofía', value: 'filosofia' }, { label: 'Idiomas', value: 'idiomas' }, { label: 'Arte y Dibujo', value: 'arte' },
-  { label: 'Música', value: 'musica' }, { label: 'Tecnología', value: 'tecnologia' }, { label: 'Educación Física', value: 'efisica' },
-];
+const ACADEMIC = Object.fromEntries(window.RobinAcademic.systems.map((system) => [system.answer, system]));
+const academicSystem = () => ACADEMIC[S.answers.g_sistema] || ACADEMIC.Otro;
+const Q_SUBJECTS = window.RobinAcademic.genericSubjects;
 const Q_TRAITS = [
   { label: 'Analítico/a', value: 'analitico' }, { label: 'Creativo/a', value: 'creativo' }, { label: 'Líder', value: 'lider' },
   { label: 'Introvertido/a', value: 'introvertido' }, { label: 'Extrovertido/a', value: 'extrovertido' }, { label: 'Organizado/a', value: 'organizado' },
@@ -93,11 +89,11 @@ const Q_VALORA = [
 const GENERAL = { key: 'general', code: 'GEN', name: 'Información general',
   line: (n, nombre) => `${nombre ? nombre + ', primera' : 'Primera'} escala: lo básico sobre ti. Son ${n} preguntas y muchas se contestan con un toque.`,
   questions: [
-    { id: 'g_sistema', pose: 'side', type: 'single', q: '¿Qué sistema educativo estás cursando?', options: ['Bachillerato español', 'Bachillerato Internacional (IB)', 'A-Levels (británico)', 'Sistema americano', 'Bac francés', 'Otro'] },
-    { id: 'modalidad', pose: 'three', type: 'single', q: '¿Qué modalidad de bachillerato cursas?', options: ['Ciencias – tecnológico', 'Ciencias – biosanitario', 'Humanidades y Ciencias Sociales', 'Artes', 'General'], when: (a) => a.g_sistema === 'Bachillerato español' },
-    { id: 'g_nota', pose: 'away', type: 'slider', q: '¿Cuál es tu nota media del año pasado?', min: 0, max: 10, step: 0.5, def: 7, left: '0', right: '10', hint: 'Desliza para responder. Si tu sistema usa otra escala, pásala a nota sobre 10.' },
-    { id: 'g_fav', pose: 'side', type: 'multi', q: '¿Qué asignaturas te gustan MÁS?', options: Q_SUBJECTS },
-    { id: 'g_menos', pose: 'away', type: 'multi', q: '¿Qué asignaturas disfrutas MENOS?', options: Q_SUBJECTS },
+    { id: 'g_sistema', pose: 'side', type: 'single', q: '¿Qué sistema educativo estás cursando?', options: window.RobinAcademic.systems.map((system) => system.answer) },
+    { id: 'modalidad', pose: 'three', type: 'single', q: '¿Qué itinerario o modalidad cursas?', options: [], when: (a) => (ACADEMIC[a.g_sistema]?.tracks.length || 0) > 0 },
+    { id: 'g_nota', pose: 'away', type: 'slider', q: '', optional: true },
+    { id: 'g_fav', pose: 'side', type: 'multi', q: '¿Qué asignaturas te gustan MÁS?', options: Q_SUBJECTS, systemSubjects: true },
+    { id: 'g_menos', pose: 'away', type: 'multi', q: '¿Qué asignaturas disfrutas MENOS?', options: Q_SUBJECTS, systemSubjects: true },
     { id: 'g_estilo', pose: 'three', type: 'slider', q: '¿Cómo prefieres aprender?', min: 0, max: 10, step: 1, def: 5, left: 'Práctica', right: 'Teoría' },
     { id: 'g_valora', pose: 'side', type: 'multi', q: '¿Qué valoras MÁS en una carrera universitaria?', options: Q_VALORA, max: 3 },
     { id: 'g_ingles', pose: 'three', type: 'single', q: '¿Qué nivel de inglés tienes?', options: ['A2 o inferior', 'B1', 'B2', 'C1', 'C2 / Nativo'] },
@@ -189,15 +185,6 @@ const ASIGNATURAS = { key: 'asignaturas', code: 'ASG', name: 'Asignaturas',
   line: () => 'Última escala antes de aterrizar: las asignaturas que cursas este año.',
   questions: [{ id: 'asignaturas', pose: 'side', type: 'subjects', q: '¿Qué asignaturas estás cursando este curso?' }] };
 
-/* Sistema académico (portal) a partir de la respuesta de Información general, para los niveles de cada asignatura */
-const ACADEMIC = {
-  'Bachillerato español': { label: 'Bachillerato español', levels: [] },
-  'Bachillerato Internacional (IB)': { label: 'Bachillerato Internacional (IB)', levels: [{ value: 'sl', label: 'SL' }, { value: 'hl', label: 'HL' }] },
-  'A-Levels (británico)': { label: 'A-Levels británicos', levels: [{ value: 'as', label: 'AS Level' }, { value: 'a_level', label: 'A Level' }] },
-  'Sistema americano': { label: 'High School Diploma estadounidense', levels: [{ value: 'standard', label: 'Estándar' }, { value: 'honors', label: 'Honors' }, { value: 'ap', label: 'AP' }] },
-  'Bac francés': { label: 'Baccalauréat francés', levels: [] },
-  'Otro': { label: 'Otro sistema académico', levels: [] },
-};
 const MAX_SUBJECTS = 20;
 
 /* Códigos de aeropuerto para que el origen del billete se lea como un vuelo real */
@@ -234,7 +221,13 @@ function fresh() {
 let S = fresh();
 let busy = false;
 
-function questionsOf(block) { return block.questions.filter((q) => !q.when || q.when(S.answers)); }
+function questionsOf(block) {
+  return block.questions.filter((q) => !q.when || q.when(S.answers)).map((q) => {
+    if (q.id !== 'g_nota') return q;
+    const grade = academicSystem().grade;
+    return { ...q, ...grade, left: String(grade.min ?? ''), right: String(grade.max ?? '') };
+  });
+}
 function blocks() { return [GENERAL, ...(AREA_BLOCKS[S.area] ? [AREA_BLOCKS[S.area]] : []), VOCACIONAL, ASIGNATURAS].map((b) => Object.assign({}, b, { qs: questionsOf(b) })); }
 function totalQuestions() { return blocks().reduce((n, b) => n + b.qs.length, 0) + 1; }
 function originCode() {
@@ -328,7 +321,7 @@ $('#ticket-form').addEventListener('submit', async (e) => {
 function renderRuta() {
   $('#areas').innerHTML = AREAS.map((a) => `<button type="button" class="area" data-k="${a.key}" aria-pressed="${S.area === a.key}"><span class="acode">${esc(a.code)}</span><span class="aname">${esc(tr(a.name))}</span><span class="aex">${esc(tr(a.ex))}</span></button>`).join('');
   const bl = blocks(); const oc = originCode() || 'ORG'; const area = areaBy(S.area);
-  const count = (b) => (b.key === 'asignaturas' ? tr('1 pantalla') : `${b.qs.length}${b.key === 'general' && !S.answers.g_sistema ? '–18' : ''} ${tr('preg.')}`);
+  const count = (b) => (b.key === 'asignaturas' ? tr('1 pantalla') : `${b.qs.length}${b.key === 'general' && !S.answers.g_sistema ? '–15' : ''} ${tr('preg.')}`);
   const rows = [
     `<li><span class="sc">${esc(oc)}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(S.ticket.ciudad || tr('Tu ciudad'))}</span><span class="sq">${tr('Origen')}</span></li>`,
     ...bl.map((b) => `<li class="${AREA_BLOCKS[b.key] ? 'esc' : ''}"><span class="sc">${b.code}</span><span class="dot" aria-hidden="true"></span><span class="sn">${esc(tr(b.name))}</span><span class="sq">${count(b)}</span></li>`),
@@ -711,15 +704,16 @@ function hop() {
 }
 const RENDER = {
   single(box, q) {
-    const opts = q.options.map(norm);
+    const opts = (q.id === 'modalidad' ? academicSystem().tracks : q.options).map(norm);
     const cur = S.answers[q.id];
     box.innerHTML = `<div class="opts ${layoutClass(opts.map((o) => tr(o.label)))}" role="group" aria-label="${esc(tr(q.q))}">${opts.map((o) => `<button type="button" class="opt" data-v="${esc(o.value)}" aria-pressed="${cur === o.value}"><span>${esc(tr(o.label))}</span><span class="tick">${ICON.check}</span></button>`).join('')}</div>`;
     box.querySelector('.opts').addEventListener('click', (e) => {
       const b = e.target.closest('.opt'); if (!b || busy) return;
       S.answers[q.id] = b.dataset.v;
       if (q.id === 'g_sistema') {
-        if (b.dataset.v !== 'Bachillerato español') delete S.answers.modalidad;
-        if (b.dataset.v !== cur && Array.isArray(S.answers.asignaturas)) S.answers.asignaturas.forEach((x) => { x.level = ''; });
+        if (b.dataset.v !== cur) {
+          ['modalidad', 'g_nota', 'g_fav', 'g_menos', 'asignaturas'].forEach((key) => delete S.answers[key]);
+        }
       }
       $$('.opt', box).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       autoNext();
@@ -727,7 +721,7 @@ const RENDER = {
     setActions({ noNext: cur === undefined, label: nextLabel() });
   },
   multi(box, q) {
-    const opts = q.options.map(norm);
+    const opts = (q.systemSubjects ? academicSystem().subjects : q.options).map(norm);
     const sel = new Set(S.answers[q.id] || []);
     const actions = () => setActions({ disabled: !q.optional && !sel.size, skip: q.optional && !sel.size, label: nextLabel() });
     const draw = () => {
@@ -778,8 +772,9 @@ function renderSlider(box, q) {
     r.setAttribute('aria-valuetext', valueText);
   };
   paint();
-  r.addEventListener('input', () => { S.answers[q.id] = Number(r.value); paint(); });
-  setActions({ label: nextLabel() });
+  const actions = () => setActions({ disabled: !!q.optional && S.answers[q.id] === undefined, skip: !!q.optional, label: nextLabel() });
+  r.addEventListener('input', () => { S.answers[q.id] = Number(r.value); paint(); actions(); });
+  actions();
 }
 function textLike(box, q, multiline) {
   const id = 'in-' + q.id;
@@ -812,7 +807,7 @@ function textLike(box, q, multiline) {
   if (window.matchMedia('(min-width: 900px)').matches) setTimeout(() => el.focus({ preventScroll: true }), 280);
 }
 function renderSubjects(box, q) {
-  const sys = ACADEMIC[S.answers.g_sistema] || ACADEMIC['Otro'];
+  const sys = academicSystem();
   if (!Array.isArray(S.answers.asignaturas)) S.answers.asignaturas = [];
   const list = S.answers.asignaturas;
   const lv = sys.levels;
@@ -825,7 +820,7 @@ function renderSubjects(box, q) {
   const draw = () => {
     const names = new Set(list.map((x) => x.name));
     box.innerHTML = `
-      <div class="chips" role="group" aria-label="${esc(tr('Asignaturas frecuentes'))}">${Q_SUBJECTS.map((x) => `<button type="button" class="chip" data-n="${esc(x.label)}" aria-pressed="${names.has(x.label)}">${ICON.check}${esc(tr(x.label))}</button>`).join('')}</div>
+      <div class="chips" role="group" aria-label="${esc(tr('Asignaturas frecuentes'))}">${sys.subjects.map((x) => `<button type="button" class="chip" data-n="${esc(x.label)}" aria-pressed="${names.has(x.label)}">${ICON.check}${esc(tr(x.label))}</button>`).join('')}</div>
       <div class="addrow"><label class="sr" for="sub-other">${esc(tr('Otra asignatura'))}</label><input class="tinput" id="sub-other" type="text" maxlength="160" placeholder="${esc(tr('Otra asignatura, p. ej. Dibujo Técnico II'))}" autocomplete="off"><button type="button" class="btn ghost" id="sub-add">${esc(tr('Añadir'))}</button></div>
       ${list.length ? `<ul class="sublist">${list.map((x, i) => `<li><span class="sname">${esc(tr(x.name))}</span>${lv.length ? `<div class="seg" role="radiogroup" aria-label="${esc(subjectLevelLabel(x.name))}">${lv.map((l) => `<label><input type="radio" name="lv-${i}" value="${l.value}"${x.level === l.value ? ' checked' : ''} data-i="${i}"><span>${esc(tr(l.label))}</span></label>`).join('')}</div>` : ''}<button type="button" class="iconbtn" data-rm="${i}" aria-label="${esc(removeSubjectLabel(x.name))}">${ICON.x}</button></li>`).join('')}</ul>` : `<p class="empty-note">${esc(tr('Añade al menos una asignatura.'))}</p>`}
       <p class="count">${esc(tr(`${list.length} de ${MAX_SUBJECTS} como máximo`))}</p>`;
@@ -869,7 +864,7 @@ function next() {
     robinSays(zoomLine()).then(() => { busy = false; next(); });
     return;
   }
-  const cq = curQ(); if (cq && cq.type === 'slider' && S.answers[cq.id] === undefined) S.answers[cq.id] = cq.def;
+  const cq = curQ(); if (cq && cq.type === 'slider' && !cq.optional && S.answers[cq.id] === undefined) S.answers[cq.id] = cq.def;
   if (S.q < blk.qs.length - 1) S.q++;
   else if (S.b < bl.length - 1) { S.b++; S.q = -1; }
   else { land(); return; }

@@ -44,7 +44,7 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
     intereses: ['ingenierias'],
     answers: {
       g_colegio: 'Colegio de prueba', g_sistema: 'Bachillerato español',
-      modalidad: 'Ciencias – tecnológico', g_nota: 8, g_fav: ['matematicas', 'fisica'],
+      modalidad: 'Ciencias y Tecnología', g_nota: 8, g_fav: ['matematicas', 'fisica'],
       g_menos: ['historia'], g_estilo: 3, g_valora: ['innovacion'], g_rasgos: ['analitico', 'curioso'],
       g_algo: 'Me interesa especialmente construir prototipos.',
       v_trabajo10: 'Quiero diseñar sistemas aeroespaciales.', v_prioridad: 'Pasión', v_paises: ['Países Bajos'],
@@ -60,10 +60,44 @@ test('Robin Airlines adapta su cuestionario reducido sin inventar respuestas', a
   assert.equal(user.questionnaire.signals.open_responses.g_algo.answer, 'Me interesa especialmente construir prototipos.');
   assert.equal(user.questionnaire.signals.open_responses.v_trabajo10.answer, 'Quiero diseñar sistemas aeroespaciales.');
   const questions = user.questionnaire.blocks.flatMap((block) => block.items.map((item) => item.q));
-  assert.ok(questions.includes('¿Qué modalidad de bachillerato cursas?'));
+  assert.ok(questions.includes('¿Qué itinerario o modalidad cursas?'));
+  assert.ok(questions.includes('Asignaturas de este curso'));
   assert.ok(!questions.includes('Ciudad y país donde resides actualmente'));
   assert.ok(!questions.includes('¿Te atrae más la investigación o la industria?'));
   assert.match(rec.fallbackRanking(rec.getCandidates(['ingenierias'], {}, 1), 'en')[0].reason, /matches your area of interest/);
+});
+
+test('Robin Airlines conserva las escalas propias y las asignaturas de cada sistema', async () => {
+  await loadData();
+  const cases = [
+    ['Bachillerato español', 8.2, 'matematicas', 'Matemáticas II', '', '8.2/10', 'bachillerato_espanol', 'Ciencias y Tecnología'],
+    ['Bachillerato Internacional (IB)', 5.5, 'ib_matematicas_aa', 'Matemáticas: Análisis y Enfoques (AA)', 'hl', '5.5/7', 'ib'],
+    ['A-Levels (británico)', 'Matemáticas A*, Física B', 'a_matematicas_avanzadas', 'Matemáticas Avanzadas (Further Mathematics)', 'a_level', 'Matemáticas A*, Física B', 'a_levels'],
+    ['Sistema americano', 3.8, 'us_calculo', 'Cálculo', 'ap', '3.8/4', 'high_school_diploma'],
+    ['Bac francés', 14.5, 'fr_svt', 'Ciencias de la Vida y de la Tierra (SVT)', '', '14.5/20', 'baccalaureat_frances'],
+    ['Ensino Secundário português', 16.2, 'pt_matematica_a', 'Matemática A', '', '16.2/20', 'ensino_secundario_portugues', 'Ciências e Tecnologias'],
+    ['Otro', '78/100', 'matematicas', 'Matemáticas', '', '78/100', 'otro'],
+  ];
+  for (const [system, grade, favorite, subject, level, display, code, track] of cases) {
+    const user = buildAirlinesUser({ email: 'alumno@example.com', intereses: ['ciencias'],
+      answers: { g_sistema: system, g_nota: grade, g_fav: [favorite], ...(track ? { modalidad: track } : {}) },
+      academic_subjects: [{ name: subject, level }] });
+    assert.equal(user.academic_system, code);
+    assert.equal(user.questionnaire.signals.nota_media, display);
+    assert.deepEqual(user.questionnaire.signals.asignaturas_fav, [favorite]);
+    assert.ok(user.questionnaire.blocks.at(-1).items[1].a[0].includes(subject));
+    assert.ok(rec.formatStudentProfile(user.questionnaire, user.intereses).includes(subject));
+  }
+  const base = (system, grade) => ({ email: 'alumno@example.com', intereses: ['ciencias'],
+    answers: { g_sistema: system, g_nota: grade }, academic_subjects: [{ name: 'Biología', level: system.includes('IB') ? 'hl' : '' }] });
+  assert.throws(() => buildAirlinesUser(base('Bachillerato Internacional (IB)', 8)), /entre 1 y 7/);
+  assert.throws(() => buildAirlinesUser(base('Sistema americano', 4.5)), /entre 0 y 4/);
+  const withoutGrade = buildAirlinesUser(base('Bachillerato Internacional (IB)', undefined));
+  assert.equal(withoutGrade.questionnaire.signals.nota_media, null);
+  assert.throws(() => buildAirlinesUser(base('Ensino Secundário português', 16)), /Indica el itinerario/);
+  assert.throws(() => buildAirlinesUser({ ...base('Ensino Secundário português', 16), answers: {
+    g_sistema: 'Ensino Secundário português', g_nota: 16, g_fav: ['ib_matematicas_aa'], modalidad: 'Ciências e Tecnologias',
+  } }), /Revisa la respuesta/);
 });
 
 test('las respuestas abiertas vagas no pesan y las concretas generan señales útiles', () => {

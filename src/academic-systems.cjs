@@ -1,34 +1,7 @@
+const { systems: CURRICULA } = require('../robin-airlines-selector/academic-curricula.js');
+
 const ACADEMIC_SYSTEMS = [
-  {
-    value: 'bachillerato_espanol',
-    label: 'Bachillerato español',
-    subjectCount: 6,
-    levels: [],
-  },
-  {
-    value: 'ib',
-    label: 'Bachillerato Internacional (IB)',
-    subjectCount: 6,
-    levels: [
-      { value: 'sl', label: 'Nivel Estándar (SL)' },
-      { value: 'hl', label: 'Nivel Superior (HL)' },
-    ],
-  },
-  {
-    value: 'a_levels',
-    label: 'A-Levels británicos',
-    subjectCount: 4,
-    levels: [
-      { value: 'as', label: 'AS Level' },
-      { value: 'a_level', label: 'A Level' },
-    ],
-  },
-  {
-    value: 'baccalaureat_frances',
-    label: 'Baccalauréat francés',
-    subjectCount: 5,
-    levels: [],
-  },
+  ...CURRICULA.map(({ value, label, subjectCount, levels }) => ({ value, label, subjectCount, levels })),
   {
     value: 'abitur',
     label: 'Abitur alemán',
@@ -37,22 +10,6 @@ const ACADEMIC_SYSTEMS = [
       { value: 'grundkurs', label: 'Grundkurs' },
       { value: 'leistungskurs', label: 'Leistungskurs' },
     ],
-  },
-  {
-    value: 'high_school_diploma',
-    label: 'High School Diploma estadounidense',
-    subjectCount: 6,
-    levels: [
-      { value: 'standard', label: 'Estándar' },
-      { value: 'honors', label: 'Honors' },
-      { value: 'ap', label: 'AP' },
-    ],
-  },
-  {
-    value: 'otro',
-    label: 'Otro sistema académico',
-    subjectCount: 5,
-    levels: [],
   },
 ];
 
@@ -91,6 +48,24 @@ function sanitizeAcademicProfile(systemValue, subjectsValue) {
   return { system: system.value, subjects };
 }
 
+function validateAcademicGrade(systemValue, rawValue) {
+  if (rawValue == null || rawValue === '') return null;
+  const system = CURRICULA.find((entry) => entry.value === systemValue);
+  if (!system) throw new Error('Sistema académico no válido para la nota');
+  const grade = system.grade;
+  if (grade.type === 'text') {
+    const value = String(rawValue).replace(/[\r\n]+/g, ' ').trim();
+    if (value.length < 2 || value.length > 160) throw new Error('Revisa la nota y su escala');
+    return { value, display: value, scale: system.label };
+  }
+  const value = Number(rawValue);
+  const steps = (value - grade.min) / grade.step;
+  if (!Number.isFinite(value) || value < grade.min || value > grade.max || Math.abs(steps - Math.round(steps)) > 1e-6) {
+    throw new Error(`La nota debe estar entre ${grade.min} y ${grade.max}`);
+  }
+  return { value, display: `${value}/${grade.max}`, scale: `${grade.min}–${grade.max}` };
+}
+
 module.exports = {
   ACADEMIC_SYSTEMS,
   MAX_ACADEMIC_SUBJECTS,
@@ -98,4 +73,5 @@ module.exports = {
   academicSystemLabel,
   academicLevelLabel,
   sanitizeAcademicProfile,
+  validateAcademicGrade,
 };
