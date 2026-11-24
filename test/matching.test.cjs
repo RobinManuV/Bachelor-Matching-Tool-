@@ -338,6 +338,36 @@ test('las solicitudes de colegio generan el acceso acordado', () => {
     job_title: 'Orientadora académica', corporate_email: 'LUCIA@COLEGIO.ES',
   });
   assert.equal(application.corporate_email, 'lucia@colegio.es');
-  assert.equal(schoolPassword(application.school_name), 'Robin-Colegio Internacional del Norte-2027');
   assert.equal(schoolAccessCode(application.school_name, 'abc123'), 'colegio-internacional-del-norte-abc123');
+});
+
+
+test('school credentials use the private student bootstrap password exactly', () => {
+  const previous = process.env.CRM_BOOTSTRAP_PASSWORD;
+  try {
+    process.env.CRM_BOOTSTRAP_PASSWORD = 'Synthetic-student-bootstrap-2027!';
+    assert.equal(schoolPassword(), 'Synthetic-student-bootstrap-2027!');
+    assert.equal(schoolPassword('Any school'), 'Synthetic-student-bootstrap-2027!');
+    process.env.CRM_BOOTSTRAP_PASSWORD = 'Synthetic-rotated-bootstrap-2027!';
+    assert.equal(schoolPassword(), 'Synthetic-rotated-bootstrap-2027!');
+  } finally {
+    if (previous === undefined) delete process.env.CRM_BOOTSTRAP_PASSWORD;
+    else process.env.CRM_BOOTSTRAP_PASSWORD = previous;
+  }
+});
+
+test('school account creation requires a valid private bootstrap password', () => {
+  const previous = process.env.CRM_BOOTSTRAP_PASSWORD;
+  try {
+    for (const invalid of [undefined, '', 'short', 'a'.repeat(73), 'é'.repeat(37)]) {
+      if (invalid === undefined) delete process.env.CRM_BOOTSTRAP_PASSWORD;
+      else process.env.CRM_BOOTSTRAP_PASSWORD = invalid;
+      assert.throws(() => schoolPassword(), { message: 'invalid_bootstrap_password_configuration' });
+    }
+    process.env.CRM_BOOTSTRAP_PASSWORD = 'a'.repeat(72);
+    assert.equal(schoolPassword(), 'a'.repeat(72));
+  } finally {
+    if (previous === undefined) delete process.env.CRM_BOOTSTRAP_PASSWORD;
+    else process.env.CRM_BOOTSTRAP_PASSWORD = previous;
+  }
 });

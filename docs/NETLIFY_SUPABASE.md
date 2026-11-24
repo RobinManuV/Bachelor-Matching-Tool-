@@ -32,11 +32,12 @@ En **Netlify → Project configuration → Environment variables**, crea estas v
 | `SUPABASE_SECRET_KEY` | Sí | Clave `sb_secret_...` de Supabase |
 | `SUPABASE_PUBLISHABLE_KEY` | Sí | Clave `sb_publishable_...` para iniciar sesión |
 | `SUPABASE_DB_URL` | Sí | Connection string PostgreSQL de Supabase; se usa solo durante el build |
-| `SITE_URL` | Sí | URL pública de Netlify, sin barra final |
+| `SITE_URL` | Sí | `https://project-robin.com/rbmt`, sin barra final |
 | `RESEND_API_KEY` | Sí | Clave de Resend para solicitudes y credenciales |
 | `RESEND_FROM` | Sí | Por ejemplo `Project Robin <no-reply@project-robin.com>` |
 | `APPLICATION_NOTIFY_EMAIL` | Sí | `hello@project-robin.com` |
 | `ROBIN_ADMIN_INITIAL_PASSWORD` | Sí | Contraseña inicial acordada para los tres administradores Robin |
+| `CRM_BOOTSTRAP_PASSWORD` | Sí | Contraseña inicial privada de colegios; usar el mismo valor que en el alta de alumnos del CRM. Necesaria para el build y las Functions. |
 | `ANTHROPIC_API_KEY` | No | Activa el segundo ranking con Claude |
 | `ANTHROPIC_MODEL` | No | Modelo; por defecto `claude-haiku-4-5-20251001` |
 
@@ -64,7 +65,9 @@ ROBIN_ADMIN_INITIAL_PASSWORD=<contraseña inicial acordada>
 El build crea automáticamente, si no existen, estos accesos:
 
 - `manuel@project-robin.com`, `noel@project-robin.com` y `maria@project-robin.com`, con el valor de `ROBIN_ADMIN_INITIAL_PASSWORD`.
-- `colegio.demo@project-robin.com`, asociado a `Colegio Demo`, con contraseña `Robin-Colegio Demo-2027`.
+El despliegue prepara las cuentas iniciales configuradas en `scripts/deploy-setup.cjs`, incluida la cuenta de demostración. `CRM_BOOTSTRAP_PASSWORD` debe estar disponible durante el build y en el entorno de las Functions, con el mismo valor que se usa para las altas de alumnos del CRM. El valor no se publica en Git ni se calcula a partir del nombre del colegio. Si falta o no cumple la política de 8 caracteres y un máximo de 72 bytes UTF-8, el despliegue o la aprobación falla antes de crear el acceso.
+
+Al aprobar un colegio nuevo, Supabase Auth almacena el hash de `CRM_BOOTSTRAP_PASSWORD`. Este cambio no restablece las contraseñas de colegios existentes ni migra sus cuentas; las credenciales actuales se mantienen.
 
 Para ejecutar la misma preparación manualmente desde el proyecto:
 
@@ -84,7 +87,7 @@ En producción se publican bajo `https://project-robin.com/rbmt/` mediante el Wo
 3. En Supabase, abre `matching_sessions` y confirma que se ha creado una fila.
 4. Revisa que `recommendations` contiene las carreras mostradas y que `recommendation_source` indica `ai` o `fallback`.
 5. Envía una solicitud desde `/colegios/`, comprueba el correo en `hello@project-robin.com` y apruébala desde `/admin/`.
-6. Accede con el colegio aprobado y verifica que solo aparecen sus alumnos, tres recomendaciones visibles y siete bloqueadas.
+6. Accede con el colegio aprobado y verifica que solo aparecen sus alumnos y sus diez recomendaciones.
 
 Si faltan las variables de Supabase en Netlify, la aplicación devuelve un error y no presenta un resultado que no haya sido guardado.
 
@@ -97,7 +100,7 @@ npm ci
 npm run dev
 ```
 
-El panel de administración está en `http://localhost:3000/admin/` y usa las mismas tablas y cuentas de Supabase que el despliegue.
+Los entornos de desarrollo deben usar un proyecto de datos separado y cuentas de prueba. El panel publicado es [project-robin.com/rbmt/admin/](https://project-robin.com/rbmt/admin/).
 
 Sin credenciales, el servidor local permite probar el recomendador, pero no guarda las solicitudes. Esta excepción existe solo para desarrollo; en Netlify la base de datos es obligatoria.
 

@@ -26,14 +26,13 @@ robin-airlines-selector/
     └── generar-standalone.py        Regenera el archivo único a partir de los demás
 ```
 
-## Cómo verlo
+## Producción
 
-- Desde la carpeta padre, ejecuta `npm run dev` y abre `http://localhost:3000`.
-- El panel de administración está en `http://localhost:3000/admin/` y usa los datos reales configurados en `.env`.
-- La aplicación necesita el servidor del proyecto padre; abrir el HTML con doble clic no permite calcular recomendaciones.
-- Inter e IBM Plex Mono se cargan de Google Fonts (sin conexión se usa la del sistema). D-DIN Exp va incluida.
+Abre [project-robin.com/rbmt/](https://project-robin.com/rbmt/). El [panel](https://project-robin.com/rbmt/admin/) requiere una cuenta autorizada; los colegios pueden [solicitar acceso](https://project-robin.com/rbmt/colegios/).
 
-Si cambias `index.html`, `styles.css` o `app.js`, regenera el archivo único con `python3 herramientas/generar-standalone.py`.
+La interfaz necesita las Functions del proyecto padre para calcular y guardar recomendaciones. Abrir un HTML aislado no reproduce el servicio publicado. El archivo standalone es material auxiliar y no constituye otro despliegue.
+
+Inter e IBM Plex Mono se cargan de Google Fonts; D-DIN Exp está incluida. La guía de compilación y publicación vive en el [README principal](../README.md).
 
 ## Recorrido
 

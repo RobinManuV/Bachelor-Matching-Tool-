@@ -84,6 +84,7 @@ async function decideApplication(profile, body, event) {
     return { status: 'denied' };
   }
 
+  const password = schoolPassword();
   const normalized = normalizeSchoolName(application.school_name);
   let { data: school } = await supabase.from('schools').select('*').eq('normalized_name', normalized).maybeSingle();
   if (!school) {
@@ -92,7 +93,6 @@ async function decideApplication(profile, body, event) {
     school = inserted.data;
   }
 
-  const password = schoolPassword(application.school_name);
   const created = await supabase.auth.admin.createUser({
     email: application.corporate_email,
     password,
