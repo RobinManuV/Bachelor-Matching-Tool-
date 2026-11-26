@@ -17,7 +17,9 @@ npm ci
 npm test
 ```
 
-El despliegue de Netlify ejecuta `npm run deploy:setup`, que prepara el esquema y los accesos iniciales. Las nuevas altas de colegios usan `CRM_BOOTSTRAP_PASSWORD`, con el mismo valor privado que las altas de alumnos del CRM; Supabase Auth almacena su hash. Esta política se aplica a las cuentas nuevas y no modifica las contraseñas de los colegios existentes.
+El despliegue de Netlify ejecuta `npm run deploy:setup`, que prepara el esquema y los accesos iniciales. Las nuevas altas de colegios usan `CRM_BOOTSTRAP_PASSWORD`, con el mismo valor configurado para las altas de alumnos del CRM; Supabase Auth almacena su hash. Esta política aplica a las altas nuevas; el build restablece las cuentas de bootstrap definidas por el script, incluida la cuenta de demostración. Consulta la [guía de despliegue](docs/NETLIFY_SUPABASE.md) antes de publicar.
+
+La [guía del repositorio público](docs/PUBLIC_REPOSITORY.md) explica el flujo de datos, los límites de seguridad, la licencia y los puntos que hay que revisar antes de compartir el enlace.
 
 ## Qué contiene
 
@@ -72,3 +74,9 @@ El script toma el envío más reciente de cada correo, conserva su fecha origina
 ## Netlify y Supabase
 
 La configuración de Netlify ya forma parte del repositorio. Para crear la base de datos y añadir los secretos necesarios, sigue [`docs/NETLIFY_SUPABASE.md`](docs/NETLIFY_SUPABASE.md).
+
+## Licencia y reutilización
+
+Este repositorio es público, pero **no está publicado bajo una licencia de código abierto**. Consulta [`LICENSE`](LICENSE) y la [guía de derechos y reutilización](docs/PUBLIC_REPOSITORY.md#licencia-y-reutilización). GitHub permite ver y bifurcar repositorios públicos; eso no concede una licencia general para reutilizar el código fuera de la plataforma. Los assets de terceros pueden tener términos distintos.
+
+Para reportar un problema de seguridad, consulta [`SECURITY.md`](SECURITY.md); no uses una incidencia pública para enviar credenciales, datos de alumnos o detalles de vulnerabilidades sin corregir.

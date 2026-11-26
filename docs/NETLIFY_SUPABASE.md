@@ -24,24 +24,24 @@ No uses una publishable key para el servidor y no pongas la Secret key en JavaSc
 
 ## 3. Variables de entorno de Netlify
 
-En **Netlify → Project configuration → Environment variables**, crea estas variables con alcance para **Functions**:
+En **Netlify → Project configuration → Environment variables**, configura las variables privadas para los scopes indicados. Las claves de servicio y contraseñas deben marcarse como secretas en Netlify.
 
 | Variable | Obligatoria | Valor |
 |---|---:|---|
 | `SUPABASE_URL` | Sí | URL del proyecto de Supabase |
-| `SUPABASE_SECRET_KEY` | Sí | Clave `sb_secret_...` de Supabase |
+| `SUPABASE_SECRET_KEY` | Sí | Clave `sb_secret_...` de Supabase; Builds y Functions |
 | `SUPABASE_PUBLISHABLE_KEY` | Sí | Clave `sb_publishable_...` para iniciar sesión |
-| `SUPABASE_DB_URL` | Sí | Connection string PostgreSQL de Supabase; se usa solo durante el build |
+| `SUPABASE_DB_URL` | Sí | Connection string PostgreSQL de Supabase; Builds |
 | `SITE_URL` | Sí | `https://project-robin.com/rbmt`, sin barra final |
 | `RESEND_API_KEY` | Sí | Clave de Resend para solicitudes y credenciales |
 | `RESEND_FROM` | Sí | Por ejemplo `Project Robin <no-reply@project-robin.com>` |
 | `APPLICATION_NOTIFY_EMAIL` | Sí | `hello@project-robin.com` |
-| `ROBIN_ADMIN_INITIAL_PASSWORD` | Sí | Contraseña inicial acordada para los tres administradores Robin |
-| `CRM_BOOTSTRAP_PASSWORD` | Sí | Contraseña inicial privada de colegios; usar el mismo valor que en el alta de alumnos del CRM. Necesaria para el build y las Functions. |
+| `ROBIN_ADMIN_INITIAL_PASSWORD` | Sí | Contraseña de bootstrap de las tres cuentas administrativas Robin; Builds |
+| `CRM_BOOTSTRAP_PASSWORD` | Sí | Contraseña inicial privada compartida por las altas del CRM y de colegios; Builds y Functions |
 | `ANTHROPIC_API_KEY` | No | Activa el segundo ranking con Claude |
 | `ANTHROPIC_MODEL` | No | Modelo; por defecto `claude-haiku-4-5-20251001` |
 
-No añadas estos secretos a `netlify.toml`. `SUPABASE_DB_URL` y `ROBIN_ADMIN_INITIAL_PASSWORD` deben estar disponibles para **Builds**; las claves de Supabase usadas por la aplicación deben estar disponibles para **Functions**. Después de crear o modificar una variable, haz un despliegue nuevo.
+No añadas estos secretos a `netlify.toml`, a `.env.example` con un valor real, ni al código. Después de crear o modificar una variable, hace falta un despliegue nuevo para que Build y Functions usen la configuración actual.
 
 ## 4. Conectar y desplegar
 
@@ -52,7 +52,9 @@ El repositorio ya incluye `netlify.toml`, por lo que Netlify toma automáticamen
 - Ruta pública del motor: `/api/match`
 - Comando de build: `npm run deploy:setup`
 
-En Netlify, vincula el repositorio `RobinManuV/Bachelor-Matching-Tool-` y publica. Si el sitio ya estaba vinculado, el push a `main` iniciará el despliegue. El build aplica `supabase/schema.sql`, crea mediante Supabase Auth los accesos que falten y ejecuta `supabase/seed.sql`. El proceso es idempotente: no duplica cuentas ni colegios en despliegues posteriores y no cambia contraseñas de cuentas que ya existan.
+En Netlify, vincula el repositorio `RobinManuV/Bachelor-Matching-Tool-` y publica. Si el sitio ya estaba vinculado, un push a `main` inicia un build. El script aplica `supabase/schema.sql`, prepara los perfiles con `supabase/seed.sql` y asegura las cuentas iniciales.
+
+**El build actual restablece las credenciales de las tres cuentas administrativas Robin a `ROBIN_ADMIN_INITIAL_PASSWORD` y la de la cuenta de demostración a `CRM_BOOTSTRAP_PASSWORD` en cada ejecución.** Comprueba y acepta este comportamiento antes de publicar. El código no cambia automáticamente las contraseñas de los colegios fuera de esa cuenta de demostración. Las altas aprobadas de colegios reciben `CRM_BOOTSTRAP_PASSWORD`; la contraseña se envía al contacto del colegio por correo y Supabase Auth almacena su hash.
 
 ## 5. Accesos iniciales
 
@@ -65,9 +67,9 @@ ROBIN_ADMIN_INITIAL_PASSWORD=<contraseña inicial acordada>
 El build crea automáticamente, si no existen, estos accesos:
 
 - `manuel@project-robin.com`, `noel@project-robin.com` y `maria@project-robin.com`, con el valor de `ROBIN_ADMIN_INITIAL_PASSWORD`.
-El despliegue prepara las cuentas iniciales configuradas en `scripts/deploy-setup.cjs`, incluida la cuenta de demostración. `CRM_BOOTSTRAP_PASSWORD` debe estar disponible durante el build y en el entorno de las Functions, con el mismo valor que se usa para las altas de alumnos del CRM. El valor no se publica en Git ni se calcula a partir del nombre del colegio. Si falta o no cumple la política de 8 caracteres y un máximo de 72 bytes UTF-8, el despliegue o la aprobación falla antes de crear el acceso.
+El despliegue prepara tres cuentas administrativas y una cuenta de demostración configuradas en `scripts/deploy-setup.cjs`. `CRM_BOOTSTRAP_PASSWORD` debe estar disponible durante el build y en el entorno de las Functions, con el mismo valor que se usa para las altas de alumnos del CRM. El valor no se publica en Git ni se calcula a partir del nombre del colegio. Si falta o no cumple la política de 8 caracteres y un máximo de 72 bytes UTF-8, el despliegue o la aprobación falla antes de crear el acceso.
 
-Al aprobar un colegio nuevo, Supabase Auth almacena el hash de `CRM_BOOTSTRAP_PASSWORD`. Este cambio no restablece las contraseñas de colegios existentes ni migra sus cuentas; las credenciales actuales se mantienen.
+Al aprobar un colegio nuevo, Supabase Auth recibe `CRM_BOOTSTRAP_PASSWORD` y almacena el hash. Esta política aplica a las nuevas altas. No migra las contraseñas de los colegios existentes.
 
 Para ejecutar la misma preparación manualmente desde el proyecto:
 
@@ -106,4 +108,6 @@ Sin credenciales, el servidor local permite probar el recomendador, pero no guar
 
 ## Privacidad
 
-La tabla contiene datos personales, incluido correo y teléfono. Antes de abrir el formulario al público, define quién puede consultar esos datos, durante cuánto tiempo se conservan y cómo se atienden solicitudes de acceso o borrado. El consentimiento del formulario y su fecha quedan registrados, pero eso no sustituye una política de privacidad revisada para el uso real del servicio.
+`matching_sessions` almacena datos personales, incluido nombre, apellidos, email, teléfono, colegio, ciudad y país de origen, consentimiento, respuestas y recomendaciones. `school_applications` almacena datos de contacto profesional de la solicitud. El acceso de las Functions usa una clave de servidor; RLS no concede acceso de lectura a usuarios `anon` o `authenticated`.
+
+El consentimiento y su fecha quedan registrados, pero eso no sustituye una política de privacidad accesible para el usuario. Este repositorio no define un plazo global de conservación ni un proceso completo de acceso, rectificación y borrado para todas las copias y proveedores. Antes de ampliar el uso público, acuerda esos responsables y procedimientos. La [guía del repositorio público](PUBLIC_REPOSITORY.md) y la [política de seguridad](../SECURITY.md) describen los límites de publicación y reporte.

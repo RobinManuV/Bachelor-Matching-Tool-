@@ -34,6 +34,8 @@ La interfaz necesita las Functions del proyecto padre para calcular y guardar re
 
 Inter e IBM Plex Mono se cargan de Google Fonts; D-DIN Exp está incluida. La guía de compilación y publicación vive en el [README principal](../README.md).
 
+Los recursos visuales y los archivos HTML incluidos en este repositorio no tienen una licencia general de reutilización. Consulta el [aviso de licencia](../LICENSE) y la [guía de derechos](../docs/PUBLIC_REPOSITORY.md); las fuentes, fotografías, marcas e ilustraciones de terceros se rigen por sus propias condiciones.
+
 ## Recorrido
 
 1. **Check-in (billete):** nombre, apellidos, correo, teléfono móvil, colegio, ciudad y país de origen, consentimiento.
