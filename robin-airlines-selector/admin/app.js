@@ -8,7 +8,7 @@ const toast = document.querySelector('#toast');
 const SESSION_KEY = 'robin_matching_admin_session';
 const areaNames = { ciencias: 'Ciencias', tecnologia_y_programacion: 'Tecnología', business: 'Business', ciencias_de_la_salud: 'Salud', ingenierias: 'Ingenierías', ciencias_sociales: 'Ciencias sociales', artes: 'Artes' };
 
-let state = { profile: null, sessions: [], applications: [], selected: null, view: 'students', query: '', session: null };
+let state = { profile: null, sessions: [], applications: [], studentActivity: [], selected: null, view: 'students', query: '', session: null };
 let tourStep = 0;
 let tourDemoSelectedId = 'tutorial-demo-1';
 const tourCopy = {
@@ -199,7 +199,7 @@ function renderShell() {
   app.innerHTML = `<div class="shell">
     <aside class="sidebar"><div class="sidebar-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"><span>Matching de carreras</span></div>
       <div class="identity"><span class="avatar">${esc(initials(state.profile.full_name))}</span><div><strong>${esc(state.profile.full_name)}</strong><small>${robin ? 'Administración Robin' : esc(school?.name || 'Colegio')}</small></div></div>
-      <nav class="nav" aria-label="Panel"><button data-view="students">Alumnos</button>${robin ? `<button data-view="applications">Solicitudes <span class="count">${state.applications.filter((x) => x.status === 'pending').length}</span></button>` : ''}</nav>
+      <nav class="nav" aria-label="Panel"><button data-view="students">Alumnos</button>${robin ? `<button data-view="student-activity">Actividad de la app</button><button data-view="applications">Solicitudes <span class="count">${state.applications.filter((x) => x.status === 'pending').length}</span></button>` : ''}</nav>
       <div class="sidebar-foot"><img src="assets/robin-student.svg" alt=""><strong>Tu espacio Robin</strong><span>Matching de carreras</span><button data-logout type="button">Cerrar sesión</button></div>
     </aside>
     <header class="topbar"><span class="topbar-title">Panel de matching</span>
@@ -217,7 +217,41 @@ function renderShell() {
 
 function renderView() {
   document.querySelectorAll('[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === state.view));
-  if (state.view === 'applications' && state.profile.role === 'robin') renderApplications(); else renderStudents();
+  if (state.view === 'applications' && state.profile.role === 'robin') renderApplications();
+  else if (state.view === 'student-activity' && state.profile.role === 'robin') loadStudentActivity();
+  else renderStudents();
+}
+
+async function loadStudentActivity() {
+  const main = document.querySelector('#main');
+  main.innerHTML = '<div class="empty">Cargando actividad de RobinRecomendator…</div>';
+  try {
+    const result = await api('student-activity');
+    state.studentActivity = result.students || [];
+    renderStudentActivity();
+  } catch (error) {
+    main.innerHTML = `<div class="empty">${esc(error.message)}</div>`;
+  }
+}
+
+function renderStudentActivity() {
+  const main = document.querySelector('#main');
+  const students = state.studentActivity;
+  const sessions = students.reduce((count, student) => count + student.session_count, 0);
+  const feedback = students.reduce((count, student) => count + student.feedback_count, 0);
+  main.innerHTML = `<header class="page-head"><div><p>RobinRecomendator · solo administradores Robin</p><h1>Actividad de la app</h1></div><div class="page-tools"><button class="btn" id="refresh-activity" type="button">Actualizar</button></div></header>
+    <div class="content"><section class="applications"><div class="manifest-head"><span>${students.length} cuentas · ${sessions} recomendaciones · ${feedback} valoraciones</span><span>Actualizado ${esc(formatDate(new Date().toISOString()))}</span></div>
+    ${students.length ? students.map((student) => `<details class="activity-user"><summary><strong>${esc(student.name || student.email || student.user_id)}</strong><span>${esc(student.email)}</span><span>${student.session_count} recomendaciones</span><span>${student.feedback_count} opiniones · ${student.community_contribution_count} aportes</span><time>${esc(formatDate(student.last_activity_at))}</time></summary>
+      <div class="activity-details"><p>Cuenta: ${esc(student.user_id)} · Creada ${esc(formatDate(student.account_created_at))} · País ${esc(student.country_code || '—')} · Consentimiento ${esc(student.consent_status)}</p>
+      ${student.guardian ? `<p>Tutor: ${esc(student.guardian.email)} · ${student.guardian.confirmed_at ? `Confirmado ${esc(formatDate(student.guardian.confirmed_at))}` : `Pendiente; caduca ${esc(formatDate(student.guardian.expires_at))}`}</p>` : ''}
+      ${student.sessions.length ? student.sessions.map((session, index) => `<details class="activity-session"><summary>Recomendación ${student.sessions.length - index} · ${esc(formatDate(session.created_at))} · ${esc((session.selected_areas || []).join(', '))} · ${(session.recommendations || []).length} carreras · ${session.feedback.length} opiniones</summary>
+        <div class="activity-session-body"><p>Sistema académico: ${esc(session.academic_system || '—')} · Fuente: ${esc(session.recommendation_source || '—')} · Modelo: ${esc(session.recommendation_model || '—')}</p>
+        <h4>Asignaturas</h4><p>${(session.academic_subjects || []).map((item) => esc(item.name || item)).join(', ') || '—'}</p>
+        ${(session.questionnaire?.blocks || []).map((block) => `<h4>${esc(block.title)}</h4><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl>`).join('')}
+        <h4>Carreras recomendadas</h4><ol>${(session.recommendations || []).map((item) => `<li>${esc(item.career_name)} · ${esc(item.university)} · ${esc(item.compatibility)}%</li>`).join('')}</ol>
+        <h4>Opiniones del usuario</h4>${session.feedback.length ? session.feedback.map((item) => `<p>${esc(item.program_code)} · ${item.decision === 'approved' ? 'Sí' : 'No'} · ${esc(item.comment || 'Sin comentario')} · ${esc(formatDate(item.updated_at || item.created_at))}</p>`).join('') : '<p>Sin opiniones todavía.</p>'}</div></details>`).join('') : '<p>Aún no ha generado recomendaciones.</p>'}
+      ${student.community_contributions.length ? `<h4>Aportes al aprendizaje común (${student.community_contribution_count})</h4>${student.community_contributions.map((item) => `<p>${esc(item.area)} · ${esc(item.program_code)} · ${item.decision === 'approved' ? 'Sí' : 'No'} · Favorables: ${esc((item.positive_terms || []).join(', ') || '—')} · A mejorar: ${esc((item.negative_terms || []).join(', ') || '—')} · ${esc(formatDate(item.updated_at))}</p>`).join('')}` : ''}</div></details>`).join('') : '<div class="empty">Todavía no hay cuentas de la app.</div>'}</section></div>`;
+  document.querySelector('#refresh-activity').addEventListener('click', loadStudentActivity);
 }
 
 function filteredSessions() {

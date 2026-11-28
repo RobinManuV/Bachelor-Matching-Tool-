@@ -32,6 +32,9 @@ En **Netlify → Project configuration → Environment variables**, configura la
 | `SUPABASE_SECRET_KEY` | Sí | Clave `sb_secret_...` de Supabase; Builds y Functions |
 | `SUPABASE_PUBLISHABLE_KEY` | Sí | Clave `sb_publishable_...` para iniciar sesión |
 | `SUPABASE_DB_URL` | Sí | Connection string PostgreSQL de Supabase; Builds |
+
+| Variable | Obligatoria | Valor |
+|---|---:|---|
 | `SITE_URL` | Sí | `https://project-robin.com/rbmt`, sin barra final |
 | `RESEND_API_KEY` | Sí | Clave de Resend para solicitudes y credenciales |
 | `RESEND_FROM` | Sí | Por ejemplo `Project Robin <no-reply@project-robin.com>` |
@@ -40,6 +43,10 @@ En **Netlify → Project configuration → Environment variables**, configura la
 | `CRM_BOOTSTRAP_PASSWORD` | Sí | Contraseña inicial privada compartida por las altas del CRM y de colegios; Builds y Functions |
 | `ANTHROPIC_API_KEY` | No | Activa el segundo ranking con Claude |
 | `ANTHROPIC_MODEL` | No | Modelo; por defecto `claude-haiku-4-5-20251001` |
+
+### RobinRecomendator (cuentas de estudiantes)
+
+Aplica la migración `supabase/migrations/20261127_student_recommender.sql` antes de desplegar las funciones. La configuración de ejemplo solo habilita España con consentimiento propio desde los 14 años y autorización de tutor por debajo de esa edad, conforme a la [AEPD](https://www.aepd.es/preguntas-frecuentes/10-menores-y-educacion/FAQ-1001-cual-es-la-edad-para-que-los-menores-puedan-prestar-consentimiento-para-tratar-sus-datos-personales) y el [artículo 7 de la LOPDGDD](https://www.boe.es/eli/es/lo/2018/12/05/3). Limita la distribución a España hasta revisar otros territorios y confirma la política con el responsable de privacidad. Configura `STUDENT_AGE_POLICIES_JSON`, `STUDENT_CONSENT_VERSION`, `RESEND_API_KEY` y `RESEND_FROM`. No pongas `SUPABASE_SECRET_KEY` en la configuración de Xcode; la app solo usa `SUPABASE_PUBLISHABLE_KEY`.
 
 No añadas estos secretos a `netlify.toml`, a `.env.example` con un valor real, ni al código. Después de crear o modificar una variable, hace falta un despliegue nuevo para que Build y Functions usen la configuración actual.
 
@@ -50,11 +57,11 @@ El repositorio ya incluye `netlify.toml`, por lo que Netlify toma automáticamen
 - Directorio publicado: `robin-airlines-selector`
 - Functions: `netlify/functions`
 - Ruta pública del motor: `/api/match`
-- Comando de build: `npm run deploy:setup`
+- Comando de build: `npm run build`
 
-En Netlify, vincula el repositorio `RobinManuV/Bachelor-Matching-Tool-` y publica. Si el sitio ya estaba vinculado, un push a `main` inicia un build. El script aplica `supabase/schema.sql`, prepara los perfiles con `supabase/seed.sql` y asegura las cuentas iniciales.
+En Netlify, vincula el repositorio `RobinManuV/Bachelor-Matching-Tool-` y publica. Si el sitio ya estaba vinculado, un push a `main` inicia un build. Las migraciones y la preparación inicial de cuentas se ejecutan por separado mediante `npm run deploy:setup` cuando son necesarias.
 
-**El build actual restablece las credenciales de las tres cuentas administrativas Robin a `ROBIN_ADMIN_INITIAL_PASSWORD` y la de la cuenta de demostración a `CRM_BOOTSTRAP_PASSWORD` en cada ejecución.** Comprueba y acepta este comportamiento antes de publicar. El código no cambia automáticamente las contraseñas de los colegios fuera de esa cuenta de demostración. Las altas aprobadas de colegios reciben `CRM_BOOTSTRAP_PASSWORD`; la contraseña se envía al contacto del colegio por correo y Supabase Auth almacena su hash.
+**Ejecutar manualmente `npm run deploy:setup` restablece las credenciales de las tres cuentas administrativas Robin a `ROBIN_ADMIN_INITIAL_PASSWORD` y la de la cuenta de demostración a `CRM_BOOTSTRAP_PASSWORD`.** El build habitual no ejecuta este script. Las altas aprobadas de colegios reciben `CRM_BOOTSTRAP_PASSWORD`; la contraseña se envía al contacto del colegio por correo y Supabase Auth almacena su hash.
 
 ## 5. Accesos iniciales
 

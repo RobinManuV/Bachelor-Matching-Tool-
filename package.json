@@ -4,6 +4,7 @@
   "private": true,
   "description": "Copia independiente del formulario y recomendador de carreras bachelor de Robin",
   "scripts": {
+    "build": "node -e \"console.log('Static site and functions ready')\"",
     "start": "node server.cjs",
     "dev": "node --watch --env-file=.env server.cjs",
     "test": "node --test test/*.test.cjs",

@@ -1,0 +1,33 @@
+name: RobinRecomendator
+options:
+  bundleIdPrefix: com.projectrobin
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  RobinRecomendator:
+    type: application
+    platform: iOS
+    sources:
+      - path: RobinRecomendator
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.projectrobin.RobinRecomendator
+        PRODUCT_NAME: RobinRecomendator
+        INFOPLIST_FILE: RobinRecomendator/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: 5.0
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 3S84TW36UJ
+        IPHONEOS_DEPLOYMENT_TARGET: 17.0
+        SWIFT_EMIT_LOC_STRINGS: YES
+      configs:
+        Debug:
+          INFOPLIST_FILE: RobinRecomendator/Resources/Info-Debug.plist
+          API_BASE_URL: http://192.168.1.161:3000
+          SUPABASE_URL: https://rbfnlkybqcqhqieleylq.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_0j9oX_REvmElolqd7WuL6w_1wFSl2ny
+        Release:
+          API_BASE_URL: https://project-robin.com/rbmt
+          SUPABASE_URL: https://rbfnlkybqcqhqieleylq.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_0j9oX_REvmElolqd7WuL6w_1wFSl2ny

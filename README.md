@@ -75,6 +75,14 @@ El script toma el envío más reciente de cada correo, conserva su fecha origina
 
 La configuración de Netlify ya forma parte del repositorio. Para crear la base de datos y añadir los secretos necesarios, sigue [`docs/NETLIFY_SUPABASE.md`](docs/NETLIFY_SUPABASE.md).
 
+## App iOS RobinRecomendator
+
+El proyecto nativo está en `ios/RobinRecomendator.xcodeproj` y usa SwiftUI. Abre el proyecto con Xcode o regénéralo con `xcodegen generate --spec ios/project.yml`. El producto se llama `RobinRecomendator` y el icono muestra `Rbmt`.
+
+Configura `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` como build settings de Xcode (son los datos públicos de cliente; nunca añadas `SUPABASE_SECRET_KEY` a la app). Para desarrollo, inicia el servidor local con `HOST=0.0.0.0 node --env-file=.env server.cjs` y configura `API_BASE_URL` en `ios/project.yml` con la IP local del Mac y el puerto del servidor. Añade `careerrecommender://auth-callback` a los redirect URLs de Supabase Auth.
+
+Aplica `supabase/migrations/20261127_student_recommender.sql`. La configuración de ejemplo habilita solo España: consentimiento propio desde los 14 años y autorización de tutor por debajo de esa edad, según la [AEPD](https://www.aepd.es/preguntas-frecuentes/10-menores-y-educacion/FAQ-1001-cual-es-la-edad-para-que-los-menores-puedan-prestar-consentimiento-para-tratar-sus-datos-personales) y el [artículo 7 de la LOPDGDD](https://www.boe.es/eli/es/lo/2018/12/05/3). Limita App Store Connect a España hasta revisar otros territorios. El flujo de tutor requiere `RESEND_API_KEY` y `RESEND_FROM`. Revisa `ios/RobinRecomendator/Resources/PrivacyPolicy.md` y sustituye los campos pendientes antes de distribuir la app.
+
 ## Licencia y reutilización
 
 Este repositorio es público, pero **no está publicado bajo una licencia de código abierto**. Consulta [`LICENSE`](LICENSE) y la [guía de derechos y reutilización](docs/PUBLIC_REPOSITORY.md#licencia-y-reutilización). GitHub permite ver y bifurcar repositorios públicos; eso no concede una licencia general para reutilizar el código fuera de la plataforma. Los assets de terceros pueden tener términos distintos.

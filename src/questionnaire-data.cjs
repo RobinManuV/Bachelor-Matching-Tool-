@@ -45,7 +45,7 @@ const Q_GENERAL = {
   key: "general",
   title: "Bloque 1 · Información general",
   questions: [
-    { id: "g_colegio", type: "text", q: "Nombre de tu colegio actual" },
+    { id: "g_colegio", type: "text", q: "Nombre de tu colegio actual", optional: true },
     { id: "g_sistema", type: "single", q: "¿Qué sistema educativo estás cursando?", options: ["Bachillerato español", "Bachillerato Internacional (IB)", "A-Levels (británico)", "Sistema americano", "Bac francés", "Otro"] },
     { id: "g_nota", type: "slider", q: "¿Cuál es tu nota media del año pasado?", min: 0, max: 10, step: 0.5, def: 7, left: "0", right: "10" },
     { id: "g_fav", type: "multi", q: "¿Qué asignaturas te gustan MÁS?", options: Q_SUBJECTS },

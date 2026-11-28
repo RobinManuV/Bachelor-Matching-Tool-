@@ -60,6 +60,72 @@ async function listApplications(profile) {
   return data || [];
 }
 
+async function listStudentActivity(profile) {
+  if (profile.role !== 'robin') fail(403, 'Solo Robin puede consultar la actividad de la app');
+  const supabase = getAdminClient();
+  const [profilesResult, sessionsResult, feedbackResult, consentsResult, contributionsResult] = await Promise.all([
+    supabase.from('student_profiles').select('*').order('created_at', { ascending: false }),
+    supabase.from('student_recommendation_sessions').select('*').order('created_at', { ascending: false }),
+    supabase.from('student_recommendation_feedback').select('*').order('created_at', { ascending: false }),
+    supabase.from('student_guardian_consents').select('user_id,guardian_email,expires_at,confirmed_at,created_at'),
+    supabase.from('career_feedback_contributions').select('user_id,area,program_code,decision,positive_terms,negative_terms,updated_at'),
+  ]);
+  for (const result of [profilesResult, sessionsResult, feedbackResult, consentsResult, contributionsResult]) if (result.error) throw result.error;
+
+  const profileRows = profilesResult.data || [];
+  const userIds = new Set(profileRows.map((item) => item.user_id));
+  (sessionsResult.data || []).forEach((item) => userIds.add(item.user_id));
+  (feedbackResult.data || []).forEach((item) => userIds.add(item.user_id));
+  (contributionsResult.data || []).forEach((item) => userIds.add(item.user_id));
+  const usersById = new Map();
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    for (const user of data.users || []) {
+      if (userIds.has(user.id)) usersById.set(user.id, {
+        email: user.email || '',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || '',
+        created_at: user.created_at,
+      });
+    }
+    if (!data.users || data.users.length < 1000) break;
+  }
+
+  const profilesById = new Map(profileRows.map((item) => [item.user_id, item]));
+  const sessionsByUser = new Map();
+  for (const session of sessionsResult.data || []) {
+    if (!sessionsByUser.has(session.user_id)) sessionsByUser.set(session.user_id, []);
+    session.feedback = (feedbackResult.data || []).filter((feedback) => feedback.session_id === session.id);
+    sessionsByUser.get(session.user_id).push(session);
+  }
+  const consentByUser = new Map((consentsResult.data || []).map((item) => [item.user_id, item]));
+  return [...userIds].map((user_id) => {
+    const account = usersById.get(user_id) || {};
+    const studentProfile = profilesById.get(user_id) || {};
+    const sessions = sessionsByUser.get(user_id) || [];
+    const feedbackCount = sessions.reduce((count, session) => count + session.feedback.length, 0);
+    const contributions = (contributionsResult.data || []).filter((item) => item.user_id === user_id);
+    const consent = consentByUser.get(user_id);
+    const lastActivity = [...sessions.flatMap((session) => [session.created_at, ...session.feedback.map((item) => item.updated_at || item.created_at)]), studentProfile.updated_at, consent?.confirmed_at]
+      .filter(Boolean).sort().at(-1) || account.created_at || studentProfile.created_at;
+    return {
+      user_id,
+      email: account.email || '',
+      name: account.name || '',
+      account_created_at: account.created_at || studentProfile.created_at,
+      country_code: studentProfile.country_code || '',
+      consent_status: studentProfile.consent_status || 'unknown',
+      guardian: consent ? { email: consent.guardian_email, confirmed_at: consent.confirmed_at, expires_at: consent.expires_at } : null,
+      session_count: sessions.length,
+      feedback_count: feedbackCount,
+      community_contribution_count: contributions.length,
+      community_contributions: contributions,
+      last_activity_at: lastActivity,
+      sessions,
+    };
+  }).sort((a, b) => String(b.last_activity_at || '').localeCompare(String(a.last_activity_at || '')));
+}
+
 async function completeOnboarding(profile) {
   if (profile.role !== 'school') fail(403, 'Solo los colegios tienen este recorrido');
   if (profile.onboarding_completed_at) return { onboarding_completed_at: profile.onboarding_completed_at };
@@ -151,6 +217,7 @@ exports.handler = async (event) => {
     const context = await authenticate(event);
     if (event.httpMethod === 'GET' && route === 'me') return json(200, { profile: context.profile });
     if (event.httpMethod === 'GET' && route === 'sessions') return json(200, { sessions: await listSessions(context.profile) });
+    if (event.httpMethod === 'GET' && route === 'student-activity') return json(200, { students: await listStudentActivity(context.profile) });
     if (event.httpMethod === 'GET' && route === 'applications') return json(200, { applications: await listApplications(context.profile) });
     if (event.httpMethod === 'POST' && route === 'onboarding/complete') return json(200, await completeOnboarding(context.profile));
     if (event.httpMethod === 'POST' && route === 'applications/decision') return json(200, await decideApplication(context.profile, body, event));

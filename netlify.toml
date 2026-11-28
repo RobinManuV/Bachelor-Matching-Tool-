@@ -1,5 +1,5 @@
 [build]
-  command = "npm run deploy:setup"
+  command = "npm run build"
   publish = "robin-airlines-selector"
 
 [functions]
@@ -10,6 +10,54 @@
 [[redirects]]
   from = "/api/match"
   to = "/.netlify/functions/match"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/match"
+  to = "/.netlify/functions/student-match"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/history"
+  to = "/.netlify/functions/student-history"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/legacy"
+  to = "/.netlify/functions/student-legacy"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/feedback"
+  to = "/.netlify/functions/student-feedback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/account"
+  to = "/.netlify/functions/student-account"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/config"
+  to = "/.netlify/functions/student-config"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/eligibility"
+  to = "/.netlify/functions/student-eligibility"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/student/guardian-consent"
+  to = "/.netlify/functions/student-guardian"
   status = 200
   force = true
 

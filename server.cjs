@@ -12,6 +12,7 @@ const { systems: CURRICULA } = require('./robin-airlines-selector/academic-curri
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'robin-airlines-selector');
 const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '127.0.0.1';
 const AREA_LABELS = {
   ciencias: 'Ciencias', tecnologia_y_programacion: 'Tecnología y programación',
   business: 'Business', ciencias_de_la_salud: 'Ciencias de la salud',
@@ -221,6 +222,32 @@ function validateFeedback(value) {
 
 async function handler(req, res) {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname.startsWith('/api/student/')) {
+    const routeName = url.pathname.slice('/api/student/'.length);
+    const functions = {
+      match: 'student-match',
+      history: 'student-history',
+      legacy: 'student-legacy',
+      feedback: 'student-feedback',
+      account: 'student-account',
+      config: 'student-config',
+      eligibility: 'student-eligibility',
+      'guardian-consent': 'student-guardian',
+    };
+    const functionName = functions[routeName];
+    if (!functionName) return send(res, 404, { error: 'No encontrado' });
+    const { handler: studentHandler } = require(`./netlify/functions/${functionName}.cjs`);
+    const result = await studentHandler({
+      httpMethod: req.method,
+      headers: req.headers,
+      path: url.pathname,
+      queryStringParameters: Object.fromEntries(url.searchParams),
+      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(await readBody(req)) : null,
+    });
+    res.writeHead(result.statusCode, result.headers);
+    res.end(result.body);
+    return;
+  }
   if (url.pathname === '/.netlify/functions/admin') {
     const { handler: adminHandler } = require('./netlify/functions/admin.cjs');
     const result = await adminHandler({
@@ -296,12 +323,17 @@ async function loadData() {
   questionnaireData = { Q_GENERAL: data.Q_GENERAL, Q_AREAS: data.Q_AREAS, Q_VOCACIONAL: data.Q_VOCACIONAL };
 }
 
+function getStudentConfig() {
+  if (!questionnaireData) throw new Error('El cuestionario aún no está cargado');
+  return { ...questionnaireData, academicSystems: ACADEMIC_SYSTEMS, areaLabels: AREA_LABELS, careerCount: CAREERS.length };
+}
+
 async function start(port = PORT) {
   await loadData();
   const server = http.createServer((req, res) => handler(req, res).catch((error) => send(res, 500, { error: error.message })));
-  server.listen(port, '127.0.0.1', () => console.log(`Bachelor Matching Tool: http://localhost:${server.address().port}`));
+  server.listen(port, HOST, () => console.log(`Bachelor Matching Tool: http://${HOST}:${server.address().port}`));
   return server;
 }
 
 if (require.main === module) start().catch((error) => { console.error(error); process.exitCode = 1; });
-module.exports = { start, buildUser, buildAirlinesUser, validateFeedback, loadData };
+module.exports = { start, buildUser, buildAirlinesUser, validateFeedback, loadData, getStudentConfig };
