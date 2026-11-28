@@ -63,25 +63,31 @@ async function listApplications(profile) {
 async function listStudentActivity(profile) {
   if (profile.role !== 'robin') fail(403, 'Solo Robin puede consultar la actividad de la app');
   const supabase = getAdminClient();
-  const [profilesResult, sessionsResult, feedbackResult, consentsResult, contributionsResult] = await Promise.all([
-    supabase.from('student_profiles').select('*').order('created_at', { ascending: false }),
-    supabase.from('student_recommendation_sessions').select('*').order('created_at', { ascending: false }),
-    supabase.from('student_recommendation_feedback').select('*').order('created_at', { ascending: false }),
-    supabase.from('student_guardian_consents').select('user_id,guardian_email,expires_at,confirmed_at,created_at'),
-    supabase.from('career_feedback_contributions').select('user_id,area,program_code,decision,positive_terms,negative_terms,updated_at'),
+  async function allRows(table, columns = '*') {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from(table).select(columns).range(from, from + 999);
+      if (error) throw error;
+      rows.push(...(data || []));
+      if (!data || data.length < 1000) return rows;
+    }
+  }
+  const [profileRows, sessionRows, feedbackRows, consentRows, contributionRows] = await Promise.all([
+    allRows('student_profiles'), allRows('student_recommendation_sessions'),
+    allRows('student_recommendation_feedback'),
+    allRows('student_guardian_consents', 'user_id,guardian_email,expires_at,confirmed_at,created_at'),
+    allRows('career_feedback_contributions', 'user_id,area,program_code,decision,positive_terms,negative_terms,updated_at'),
   ]);
-  for (const result of [profilesResult, sessionsResult, feedbackResult, consentsResult, contributionsResult]) if (result.error) throw result.error;
-
-  const profileRows = profilesResult.data || [];
   const userIds = new Set(profileRows.map((item) => item.user_id));
-  (sessionsResult.data || []).forEach((item) => userIds.add(item.user_id));
-  (feedbackResult.data || []).forEach((item) => userIds.add(item.user_id));
-  (contributionsResult.data || []).forEach((item) => userIds.add(item.user_id));
+  sessionRows.forEach((item) => userIds.add(item.user_id));
+  feedbackRows.forEach((item) => userIds.add(item.user_id));
+  contributionRows.forEach((item) => userIds.add(item.user_id));
   const usersById = new Map();
   for (let page = 1; ; page += 1) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw error;
     for (const user of data.users || []) {
+      if (user.user_metadata?.role === 'student') userIds.add(user.id);
       if (userIds.has(user.id)) usersById.set(user.id, {
         email: user.email || '',
         name: user.user_metadata?.name || user.user_metadata?.full_name || '',
@@ -93,18 +99,29 @@ async function listStudentActivity(profile) {
 
   const profilesById = new Map(profileRows.map((item) => [item.user_id, item]));
   const sessionsByUser = new Map();
-  for (const session of sessionsResult.data || []) {
+  const feedbackBySession = new Map();
+  for (const item of feedbackRows) {
+    if (!feedbackBySession.has(item.session_id)) feedbackBySession.set(item.session_id, []);
+    feedbackBySession.get(item.session_id).push(item);
+  }
+  for (const session of sessionRows) {
     if (!sessionsByUser.has(session.user_id)) sessionsByUser.set(session.user_id, []);
-    session.feedback = (feedbackResult.data || []).filter((feedback) => feedback.session_id === session.id);
+    session.feedback = feedbackBySession.get(session.id) || [];
     sessionsByUser.get(session.user_id).push(session);
   }
-  const consentByUser = new Map((consentsResult.data || []).map((item) => [item.user_id, item]));
+  for (const sessions of sessionsByUser.values()) sessions.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const consentByUser = new Map(consentRows.map((item) => [item.user_id, item]));
+  const contributionsByUser = new Map();
+  for (const item of contributionRows) {
+    if (!contributionsByUser.has(item.user_id)) contributionsByUser.set(item.user_id, []);
+    contributionsByUser.get(item.user_id).push(item);
+  }
   return [...userIds].map((user_id) => {
     const account = usersById.get(user_id) || {};
     const studentProfile = profilesById.get(user_id) || {};
     const sessions = sessionsByUser.get(user_id) || [];
     const feedbackCount = sessions.reduce((count, session) => count + session.feedback.length, 0);
-    const contributions = (contributionsResult.data || []).filter((item) => item.user_id === user_id);
+    const contributions = contributionsByUser.get(user_id) || [];
     const consent = consentByUser.get(user_id);
     const lastActivity = [...sessions.flatMap((session) => [session.created_at, ...session.feedback.map((item) => item.updated_at || item.created_at)]), studentProfile.updated_at, consent?.confirmed_at]
       .filter(Boolean).sort().at(-1) || account.created_at || studentProfile.created_at;

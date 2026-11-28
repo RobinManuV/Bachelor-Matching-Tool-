@@ -8,7 +8,7 @@ const toast = document.querySelector('#toast');
 const SESSION_KEY = 'robin_matching_admin_session';
 const areaNames = { ciencias: 'Ciencias', tecnologia_y_programacion: 'Tecnología', business: 'Business', ciencias_de_la_salud: 'Salud', ingenierias: 'Ingenierías', ciencias_sociales: 'Ciencias sociales', artes: 'Artes' };
 
-let state = { profile: null, sessions: [], applications: [], studentActivity: [], selected: null, view: 'students', query: '', session: null };
+let state = { profile: null, sessions: [], applications: [], studentActivity: [], activitySelected: null, activityQuery: '', selected: null, view: 'students', query: '', session: null };
 let tourStep = 0;
 let tourDemoSelectedId = 'tutorial-demo-1';
 const tourCopy = {
@@ -199,7 +199,7 @@ function renderShell() {
   app.innerHTML = `<div class="shell">
     <aside class="sidebar"><div class="sidebar-brand"><img src="../assets/img/logo-robin.png" alt="Project Robin"><span>Matching de carreras</span></div>
       <div class="identity"><span class="avatar">${esc(initials(state.profile.full_name))}</span><div><strong>${esc(state.profile.full_name)}</strong><small>${robin ? 'Administración Robin' : esc(school?.name || 'Colegio')}</small></div></div>
-      <nav class="nav" aria-label="Panel"><button data-view="students">Alumnos</button>${robin ? `<button data-view="student-activity">Actividad de la app</button><button data-view="applications">Solicitudes <span class="count">${state.applications.filter((x) => x.status === 'pending').length}</span></button>` : ''}</nav>
+      <nav class="nav" aria-label="Panel"><button data-view="students">Alumnos</button>${robin ? `<button data-view="student-activity">Usuarios de la app</button><button data-view="applications">Solicitudes <span class="count">${state.applications.filter((x) => x.status === 'pending').length}</span></button>` : ''}</nav>
       <div class="sidebar-foot"><img src="assets/robin-student.svg" alt=""><strong>Tu espacio Robin</strong><span>Matching de carreras</span><button data-logout type="button">Cerrar sesión</button></div>
     </aside>
     <header class="topbar"><span class="topbar-title">Panel de matching</span>
@@ -239,19 +239,28 @@ function renderStudentActivity() {
   const students = state.studentActivity;
   const sessions = students.reduce((count, student) => count + student.session_count, 0);
   const feedback = students.reduce((count, student) => count + student.feedback_count, 0);
-  main.innerHTML = `<header class="page-head"><div><p>RobinRecomendator · solo administradores Robin</p><h1>Actividad de la app</h1></div><div class="page-tools"><button class="btn" id="refresh-activity" type="button">Actualizar</button></div></header>
-    <div class="content"><section class="applications"><div class="manifest-head"><span>${students.length} cuentas · ${sessions} recomendaciones · ${feedback} valoraciones</span><span>Actualizado ${esc(formatDate(new Date().toISOString()))}</span></div>
-    ${students.length ? students.map((student) => `<details class="activity-user"><summary><strong>${esc(student.name || student.email || student.user_id)}</strong><span>${esc(student.email)}</span><span>${student.session_count} recomendaciones</span><span>${student.feedback_count} opiniones · ${student.community_contribution_count} aportes</span><time>${esc(formatDate(student.last_activity_at))}</time></summary>
-      <div class="activity-details"><p>Cuenta: ${esc(student.user_id)} · Creada ${esc(formatDate(student.account_created_at))} · País ${esc(student.country_code || '—')} · Consentimiento ${esc(student.consent_status)}</p>
-      ${student.guardian ? `<p>Tutor: ${esc(student.guardian.email)} · ${student.guardian.confirmed_at ? `Confirmado ${esc(formatDate(student.guardian.confirmed_at))}` : `Pendiente; caduca ${esc(formatDate(student.guardian.expires_at))}`}</p>` : ''}
-      ${student.sessions.length ? student.sessions.map((session, index) => `<details class="activity-session"><summary>Recomendación ${student.sessions.length - index} · ${esc(formatDate(session.created_at))} · ${esc((session.selected_areas || []).join(', '))} · ${(session.recommendations || []).length} carreras · ${session.feedback.length} opiniones</summary>
-        <div class="activity-session-body"><p>Sistema académico: ${esc(session.academic_system || '—')} · Fuente: ${esc(session.recommendation_source || '—')} · Modelo: ${esc(session.recommendation_model || '—')}</p>
-        <h4>Asignaturas</h4><p>${(session.academic_subjects || []).map((item) => esc(item.name || item)).join(', ') || '—'}</p>
-        ${(session.questionnaire?.blocks || []).map((block) => `<h4>${esc(block.title)}</h4><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl>`).join('')}
-        <h4>Carreras recomendadas</h4><ol>${(session.recommendations || []).map((item) => `<li>${esc(item.career_name)} · ${esc(item.university)} · ${esc(item.compatibility)}%</li>`).join('')}</ol>
-        <h4>Opiniones del usuario</h4>${session.feedback.length ? session.feedback.map((item) => `<p>${esc(item.program_code)} · ${item.decision === 'approved' ? 'Sí' : 'No'} · ${esc(item.comment || 'Sin comentario')} · ${esc(formatDate(item.updated_at || item.created_at))}</p>`).join('') : '<p>Sin opiniones todavía.</p>'}</div></details>`).join('') : '<p>Aún no ha generado recomendaciones.</p>'}
-      ${student.community_contributions.length ? `<h4>Aportes al aprendizaje común (${student.community_contribution_count})</h4>${student.community_contributions.map((item) => `<p>${esc(item.area)} · ${esc(item.program_code)} · ${item.decision === 'approved' ? 'Sí' : 'No'} · Favorables: ${esc((item.positive_terms || []).join(', ') || '—')} · A mejorar: ${esc((item.negative_terms || []).join(', ') || '—')} · ${esc(formatDate(item.updated_at))}</p>`).join('')}` : ''}</div></details>`).join('') : '<div class="empty">Todavía no hay cuentas de la app.</div>'}</section></div>`;
+  if (!students.some((student) => student.user_id === state.activitySelected)) state.activitySelected = students[0]?.user_id || null;
+  const selected = students.find((student) => student.user_id === state.activitySelected);
+  const visible = students.filter((student) => `${student.name} ${student.email}`.toLowerCase().includes(state.activityQuery.toLowerCase()));
+  main.innerHTML = `<header class="page-head"><div><p>RobinRecomendator · solo administradores Robin</p><h1>Usuarios de la app</h1></div><div class="page-tools"><button class="btn" id="refresh-activity" type="button">Actualizar</button></div></header>
+    <div class="content"><div class="activity-stats"><span><strong>${students.length}</strong> usuarios registrados</span><span><strong>${sessions}</strong> intentos completados</span><span><strong>${feedback}</strong> opiniones</span></div>
+    <section class="activity-workspace"><div class="activity-list"><label class="sr" for="activity-search">Buscar usuario</label><input id="activity-search" class="search" type="search" placeholder="Buscar nombre o correo" value="${esc(state.activityQuery)}"><div class="activity-list-scroll">${visible.length ? visible.map((student) => `<button type="button" class="activity-person ${student.user_id === state.activitySelected ? 'active' : ''}" data-activity-user="${esc(student.user_id)}"><span class="avatar">${esc(initials(student.name || student.email))}</span><span><strong>${esc(student.name || student.email || 'Usuario')}</strong><small>${esc(student.email)}</small><small>${student.session_count} ${student.session_count === 1 ? 'intento' : 'intentos'} · ${student.feedback_count} opiniones</small></span></button>`).join('') : '<div class="empty">No hay usuarios con ese nombre.</div>'}</div></div>
+    <article class="activity-profile">${selected ? `<div class="activity-profile-head"><p>Expediente del usuario</p><h2>${esc(selected.name || selected.email || 'Usuario')}</h2><p>${esc(selected.email)}</p></div><div class="facts"><div class="fact"><span>Registrado</span><strong>${esc(formatDate(selected.account_created_at))}</strong></div><div class="fact"><span>País</span><strong>${esc(selected.country_code || 'Pendiente')}</strong></div><div class="fact"><span>Perfil</span><strong>${esc(selected.consent_status === 'active' ? 'Activo' : selected.consent_status === 'pending_guardian' ? 'Pendiente de tutor' : 'Sin completar')}</strong></div><div class="fact"><span>Última actividad</span><strong>${esc(formatDate(selected.last_activity_at))}</strong></div></div>
+      <div class="activity-profile-body"><h3>Historial de intentos (${selected.session_count})</h3>${selected.sessions.length ? selected.sessions.map((session, index) => activityAttemptHtml(session, selected.session_count - index)).join('') : '<p>Este usuario aún no ha completado ningún formulario.</p>'}
+      ${selected.guardian ? `<p class="activity-note">Tutor: ${esc(selected.guardian.email)} · ${selected.guardian.confirmed_at ? 'Autorizado' : 'Pendiente'}</p>` : ''}</div>` : '<div class="empty">Selecciona un usuario para abrir su expediente.</div>'}</article></section></div>`;
   document.querySelector('#refresh-activity').addEventListener('click', loadStudentActivity);
+  document.querySelector('#activity-search').addEventListener('input', (event) => { state.activityQuery = event.target.value; renderStudentActivity(); const search = document.querySelector('#activity-search'); search.focus(); search.setSelectionRange(search.value.length, search.value.length); });
+  document.querySelector('.activity-list-scroll').addEventListener('click', (event) => { const button = event.target.closest('[data-activity-user]'); if (!button) return; state.activitySelected = button.dataset.activityUser; renderStudentActivity(); });
+}
+
+function activityAttemptHtml(session, number) {
+  const recommendations = session.recommendations || [];
+  const feedback = session.feedback || [];
+  const opinions = new Map(feedback.map((item) => [item.program_code, item]));
+  return `<details class="activity-attempt"><summary><span class="activity-attempt-number">${number}</span><span><strong>Intento ${number} · ${esc(formatDate(session.created_at))}</strong><small>${esc((session.selected_areas || []).map((area) => areaNames[area] || area).join(' · '))} · ${recommendations.length} resultados</small></span><span class="activity-open">Ver detalles</span></summary>
+    <div class="activity-attempt-body"><h4>Perfil académico</h4><p>Sistema: ${esc(session.academic_system || '—')} · Asignaturas: ${(session.academic_subjects || []).map((item) => esc(item.name || item)).join(', ') || '—'}</p>
+    <h4>Respuestas del formulario</h4>${(session.questionnaire?.blocks || []).length ? session.questionnaire.blocks.map((block) => `<h5>${esc(block.title)}</h5><dl>${(block.items || []).map((item) => `<div class="qa"><dt>${esc(item.q)}</dt><dd>${valueHtml(item.a)}</dd></div>`).join('')}</dl>`).join('') : '<p>Sin respuestas guardadas.</p>'}
+    <h4>Resultados</h4>${recommendations.length ? `<ol class="activity-results">${recommendations.map((item) => { const opinion = opinions.get(item.program_code); return `<li><strong>${esc(item.career_name || item.name || item.program_code)}</strong><span>${esc(item.university || '')} · ${esc(item.city || '')} · ${esc(item.compatibility ?? item.score ?? '—')}% de compatibilidad</span>${item.reason || item.explanation ? `<p>${esc(item.reason || item.explanation)}</p>` : ''}${opinion ? `<p class="activity-opinion">Opinión: ${opinion.decision === 'approved' ? 'Me interesa' : 'No es para mí'}${opinion.comment ? ` · ${esc(opinion.comment)}` : ''}</p>` : ''}</li>`; }).join('')}</ol>` : '<p>Sin resultados guardados.</p>'}</div></details>`;
 }
 
 function filteredSessions() {
